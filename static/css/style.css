@@ -1,0 +1,23 @@
+/*
+    Example fishbone styling... note that you can't actually change
+    line markers here, which is annoying
+*/
+
+html, body{ margin: 0; padding: 0; overflow: hidden;}
+.link-0{ stroke: black; stroke-width: 2px; }
+.link-1{ stroke: black; stroke-width: 1px;}
+.link-2, .link-3, .link-4{ stroke: black; stroke-width: .5px; }
+
+/* get it? gill? */
+*{ font-family: "Gill Sans", "Gill Sans MT"; }
+
+body, html {
+  font-family: verdana;
+}
+
+.domain{ stroke:black; stroke-width: 1px; fill:none; }
+.tick{ 
+  stroke:black; stroke-width:0.5px; 
+  font-size:0.75em;
+}
+

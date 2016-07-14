@@ -1,0 +1,816 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Timeline</title>
+  <link rel="icon" href="{{url_for('static', filename='calendar.png')}}"></link>
+
+  <script src="{{ url_for('static', filename='js/jquery.js')}}"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+
+  <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.4/moment.min.js"></script>
+
+
+  <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}"/>
+
+  <script src="{{ url_for('static', filename='js/jquery-ui.min.js')}}"></script>
+
+    <script src="{{ url_for('static', filename='js/tether.min.js')}}"></script>
+
+
+  <script src="{{ url_for('static', filename='js/randomColor.js')}}"></script>
+
+  <script src="{{ url_for('static', filename='js/vis.min.js')}}"></script>
+  <link rel="stylesheet" href="{{url_for('static', filename='css/vis.css')}}"/>
+
+  <script src="{{ url_for('static', filename='js/d3.v3.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/d3-timeline.js')}}"></script>
+
+  <script src="{{ url_for('static', filename='js/multiple-select.js')}}"></script>
+  <link href="{{  url_for('static', filename='css/multiple-select.css')}}" rel="stylesheet" />
+
+
+
+</head>
+<style>
+
+</style>
+
+<body>
+
+  <div class="container" style='font-family:"Gill Sans", "Gill Sans MT"; left: 0px'>
+    <ul class="nav nav-pills nav-justified">
+      <li><a href="/" title="Home" data-toggle="tooltip">Home</a></li>
+      <li><a href="/timeline"> Point Timeline </a></li>
+      <li class="active"><a href="/span"> Span Timeline </a></li>
+    </ul>
+  </div>
+<br>
+
+<div class="container">
+
+  <!-- Trigger the modal with a button -->
+
+  <!-- Add Modal -->
+  <div class="modal fade" id="addModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-plus"></span> Add an Object</h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+          <form role="form" id="addObj">
+            <!--             <form role="form" id="addObj">  -->                    
+            <div class="form-group">
+              <label for="name"> New Object Name</label>
+              <input type="text" class="form-control" name="name" id="name" placeholder="Object Name">
+            </div>
+            <div class="form-group">
+              <label for="state">New Object Location</label>
+              <input type="text" class="form-control" id="state" name="state" placeholder="US State or Territory">
+            </div>
+            <div class="form-group">
+              <label for="metadata"> New Object MetaData </label><br> <textarea class="form-control" name="meta" placeholder="Description of Object" rows="4" cols="50"></textarea><br>
+            </div>
+            <div class="form-group" id="des"> </div>
+            <div class="form-group" id="date"></div>
+          </div>
+          </form>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success btn-default pull-left" value="submit" id="addsub"><span class="glyphicon glyphicon-ok"></span> Add Object</button>
+            <button type="cancel" class="btn btn-danger btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-remove"></span> Cancel</button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <!--         Remove Modal-->        
+  <div class="modal fade" id="rmModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-trash"></span> Delete an Object</h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+          <form role="form">
+            <div id='rm'></div>
+          </div>
+          <div class="modal-footer">
+          </form>
+            <button type="submit"  id="rmsub" class="btn btn-success btn-default pull-left" value="submit"><span class="glyphicon glyphicon-ok"></span> Delete Object</button>
+            <button type="cancel" class="btn btn-danger btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-remove"></span> Cancel</button>
+          </div>
+        
+      </div>
+    </div>
+  </div>
+
+  <!--   Information Modal -->
+ <div class="modal fade" id="infoModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-info-sign"></span> Object Information </h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+            <div id='info'></div>
+          </div>
+          <div class="modal-footer">
+            <button type="cancel" class="btn btn-info btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-ok"></span> Close </button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Modal -->
+  <div class="modal fade" id="updateModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-pencil"></span> Edit an Object</h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+          <form role="form">
+
+            <div id='up'></div>
+          </div>
+          </form>
+          <div class="modal-footer">
+            <button type="submit"  id="upsub" class="btn btn-success btn-default pull-left" data-target="#"><span class="glyphicon glyphicon-ok"></span> Update Object</button>
+            <button type="cancel" class="btn btn-danger btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-remove"></span> Cancel</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+</div>
+
+<div text-align="center">
+  <div id="timeline2" style="text-align:center; border: 0;"></div>
+  <div align="center" id="showImpt" ></div><div align="center" id="select"></div>
+</div>
+<br>
+<div id="visualization"></div>
+<div id="vis2"></div>
+
+
+<script type="text/javascript">
+  // DOM element where the Timeline will be attached
+  var container = document.getElementById('visualization');
+
+  var info = d3.json("/data", makeData);
+  var width = 1000;
+  var groupName = [];
+  var groups = [];
+  var colors = [];
+  var itemsRef = [];
+  var items = [];
+  var start = true;
+  var timeline;
+  var min, max;
+  var importantList = [];
+  var contents = [];
+  var subGroups = [];
+  var subGroupsCol = [];
+
+
+  //Takes in a number between 0-11 and returns the month as a string
+function monthName(num) {
+  switch (num) {
+    case 0:
+      return "January";
+      break;
+    case 1:
+      return "February";
+      break;
+    case 2:
+      return "March";
+      break;
+    case 3:
+      return "April";
+      break;
+    case 4:
+      return "May";
+      break;
+    case 5:
+      return "June";
+      break;
+    case 6:
+      return "July";
+      break;
+    case 7:
+      return "August";
+      break;
+    case 8:
+      return "September";
+      break;
+    case 9:
+      return "October";
+      break;
+    case 10:
+      return "November";
+      break;
+    case 11:
+      return "December";
+      break;
+  }
+}
+
+function makeData(theEvents){
+  itemsRef = theEvents;
+  itemsRef.sort(function(a,b) { 
+              return new Date(a.start).getTime() - new Date(b.start).getTime() 
+            });
+  makeTimeline(itemsRef);
+}
+
+  function makeTimeline(theEvents){
+    items = theEvents;
+
+    for(var i=0; i<items.length; i++){
+      if(groupName.indexOf(items[i].className) == -1){
+        groupName.push(items[i].className);
+      }
+    }
+
+    groupName.sort();
+
+    for(var k =0; k< groupName.length; k++){
+      var g = new Object();
+      g.content = groupName[k];
+      g.id = k;
+      g.value = k;
+      groups.push(g);
+    }
+
+    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'monochrome'];
+    for(var g=0; g<items.length; g++){
+      var gn = items[g].group;
+      items[g].group = groupName.indexOf(gn);
+      var str = items[g].content+" National "+items[g].className+" - " +items[g].subGroup +' - ' + items[g].start + ' - ' + items[g].metadata;
+      items[g].title = str;
+      if(items[g].important == 'true'){
+        importantList.push(items[g]);
+      }
+      var sub = items[g].subGroup;
+      if(subGroups.indexOf(sub) == -1){
+       var s = new Object();
+       s.subGroup = sub;
+       s.color = randomColor({
+        luminosity: 'light',
+        hue: hues[g % 7],
+        seed: g
+      })
+
+       subGroups.push(sub);
+       subGroupsCol.push(s);
+      }
+    }
+
+
+    for(var a =0; a<importantList.length; a++){
+      importantList[a].style = "font-weight:bold; outline-style:solid; outline-color:lightgrey;";
+    }
+
+    // if(importantList.length==0){
+    //   var btn = '<button type="button" class="btn btn-default disabled">Show Important</button>'
+    //   document.getElementById('showImpt').innerHTML = btn;
+    // }
+    // else{
+    //   var btn = '<button type="button" onclick="sortImportant('+true+')" class="btn btn-default">Show Important</button>'
+    //   document.getElementById('showImpt').innerHTML = btn;
+    // }
+
+    if(start){
+      itemsRef = items;
+      start = false;
+    }
+
+    for(var a=0; a<groups.length; a++){
+      var g = new Object();
+      g.id = groups[a].id;
+      g.group = groups[a];
+      var tem = [];
+      for(var b=0; b<items.length; b++){
+        if(items[b].group == g.group.id){
+          tem.push(items[b]);
+        }
+      }
+      g.items = tem;
+      contents.push(g);
+    }
+
+
+
+    min = new Date(items[0].start).getTime() - 604800000*52*10;
+    max = new Date(items[items.length-1].start).getTime() +604800000*52*10;
+
+
+    var optionsMajor = {
+       height: '350px',
+      min: min,
+      max: max,
+      clickToUse: true,
+      zoomMin: 604800000*4*30,
+      groupOrder: function (a, b) {
+        return a.value - b.value;
+      },
+      groupOrderSwap: function (a, b, groups) {
+        var v = a.value;
+        a.value = b.value;
+        b.value = v;
+      },
+      showCurrentTime: false
+
+    }
+
+
+    // Configuration for the Timeline
+    var options = {
+      height: '450px',
+      min: min,
+      max: max,
+      clickToUse: true,
+      zoomMin: 604800000*4*30,
+      groupOrder: function (a, b) {
+        return a.value - b.value;
+      },
+      groupOrderSwap: function (a, b, groups) {
+        var v = a.value;
+        a.value = b.value;
+        b.value = v;
+      },
+      showCurrentTime: false,
+      groupEditable: true,
+      editable: {
+        add: true,
+        updateTime: false,
+        updateGroup: false,
+        remove: true
+      },
+
+      onAdd: function (item, callback) {
+        desSTR ='<label for="des">Designation</label><br><select id="desSel" class="form-control" name="designation">';
+        for(var i=0; i<groupName.length; i++){
+          if(item.group == i){
+            desSTR += '<option selected="selected" value="'+groupName[i]+'">'+groupName[i] +'</option>';
+
+          }
+          else{
+            desSTR += '<option value="'+groupName[i]+'">'+groupName[i] +'</option>';
+          }
+        }
+        desSTR += '</select>';
+        document.getElementById('des').innerHTML = desSTR;
+        var day, month, year;
+        year = item.start.getFullYear();
+        month = item.start.getMonth() +1;
+        day = item.start.getDate();
+        if(month < 10){
+          month = '0' + month;
+        }
+        if(day < 10){
+          day = '0' + day;
+        }
+        dateStr = year +'-'+month+'-'+day;
+        var addDate ='<label for="date"> Date </label><br><input type="date" name="date" class="form-control" id="upDate" value="'+dateStr+'">'
+        document.getElementById('date').innerHTML = addDate;
+        $("#addModal").modal();
+       $('#addsub').on('click', function(){
+        $.ajax({
+          url: "{{url_for('addrec') }}",
+          method: "POST",
+          data: {
+            name: $('#name').val(),
+            date: $('#addDate').val(),
+            state: $('#state').val(),
+            meta : $('#meta').val(),
+            designation: $('#desSel').val()
+            //TODO: important always returns true.  Return true if checked, false if not
+            // important: $('#impt').val()
+
+          },
+          success: function(){
+            var ids = [];
+            $('#addModal').modal('hide');
+            item.content = $('#name').val();
+            item.subGroup = $('#state').val();
+            item.start = $('#addDate').val();
+            item.meta = $('#meta').val();
+            item.important =  false;
+            ids.push(item.id);
+            for(var i=0; i<items.length; i++){
+              if(items[i].id == item.id){
+                items[i] = item;
+              }
+              break;
+            }
+            items.sort(function(a,b) { 
+              return new Date(a.start).getTime() - new Date(b.start).getTime() 
+            });
+            makeD3Timeline();
+            var last = ids.length -1;
+            if(ids.indexOf(item.id) == last){
+              items.push(item);
+              items.sort(function(a,b) { 
+                return new Date(a.start).getTime() - new Date(b.start).getTime() 
+              });
+              makeD3Timeline(timeline);
+              console.log(item)
+              $(".vis-item."+groupName[item.group]).css('background-color', colors[item.group]).css('color', 'white');
+              callback(item);
+
+            }
+
+          }
+        })
+
+
+      })
+          
+    },
+
+
+    onUpdate: function (item, callback) {
+      var day, month, year;
+      year = item.start.getFullYear();
+      month = item.start.getMonth() +1;
+      day = item.start.getDate();
+      if(month < 10){
+        month = '0' + month;
+      }
+      if(day < 10){
+        day = '0' + day;
+      }
+      dateStr = year +'-'+month+'-'+day;
+      var upSTR = '<label for="name"> Change Name </label><br><input type="text" name="name" class="form-control" id="upName" value="'+item.content+'">';
+      upSTR += '<input type="hidden" name="origName" class="form-control" value="'+item.content+'">';
+      upSTR += '<label for="state"> Change Location </label><br><input type="text" name="state" class="form-control" id="upState" value="'+item.subGroup+'">';
+
+      upSTR += '<label for="date"> Change Date </label><br><input type="date" name="date" class="form-control" id="upDate" value="'+dateStr+'">'
+      // upSTR += '<label for="metadata"> Change MetaData </label><br> <input type="textarea" class="form-control" name="meta" value="'+item.metadata+'"><br>'
+      upSTR += '<label for="metadata"> Change MetaData </label><br> <textarea class="form-control" name="meta" rows="4" cols="50">'+item.metadata+'</textarea><br>'
+
+      var impt = (item.important == "true");
+      if(impt){
+        upSTR+=   '<input type="checkbox" name="important" value="true" checked> <b>Important</b> <br>'
+      }
+      else{
+        upSTR += '<input type="checkbox" name="important" value="true"><b> Important</b> <br>'
+
+      }
+      upSTR += '<input type="hidden" name="important" value="false" checked>'
+      document.getElementById("up").innerHTML = upSTR;
+      var ids = [];
+      $('#updateModal').modal();
+        $('#upsub').on('click', function(){
+        $.ajax({
+          url: "{{url_for('editrec') }}",
+          method: "POST",
+          data: {
+            name: $('#upName').val(),
+            origName : $('#orig').val(),
+            date: $('#upDate').val(),
+            important: $('#impt').prop("checked"),
+            // important: $("input:checkbox:checked").val(),
+            state: $('#upState').val(),
+            meta : $('#meta').val()
+            //TODO: important always returns true.  Return true if checked, false if not
+            // important: $('#impt').val()
+
+          },
+          success: function(){
+            console.log("i ran " +item.id);
+            $('#updateModal').modal('hide');
+            item.content = $('#upName').val();
+            item.subGroup = $('#upState').val();
+            item.start = $('#upDate').val();
+            item.meta = $('#meta').val();
+            item.important =  $('#impt').prop("checked");
+            ids.push(item.id);
+            for(var i=0; i<items.length; i++){
+              if(items[i].id == item.id){
+                items[i] = item;
+              }
+              break;
+            }
+            items.sort(function(a,b) { 
+              return new Date(a.start).getTime() - new Date(b.start).getTime() 
+            });
+
+            var last = ids.length -1;
+            if(ids.indexOf(item.id) == last){
+              makeImportant();
+              makeD3Timeline();
+              callback(item);
+
+            }
+
+          }
+        })
+
+
+      })
+
+      
+    },
+    onRemove: function (item, callback) {
+      rmSTR = "Are you sure you want to remove " + item.content + "?";
+      rmSTR += '<br><input type="hidden" name="name" class="form-control" id="upName" value="'+item.content+'">';
+      document.getElementById('rm').innerHTML = rmSTR;
+      $('#rmModal').modal();
+      $('#rmsub').on('click', function(){
+        $.ajax({
+          url: "{{url_for('rmrec') }}",
+          method: "POST",
+          data: {
+            name: $('#delName').val()
+          },
+          success: function(){
+            $('#rmModal').modal('hide');
+            callback(item);
+            makeD3Timeline();
+            for(var i=0; i<items.length; i++){
+              if(items[i].id == item.id){
+                items.splice(i, 1);
+              }
+            }
+          }
+        })
+
+
+      })
+      
+    }
+
+
+    };
+
+    // Create a Timeline
+    timeline = new vis.Timeline(container, items, groups, optionsMajor);
+
+    var container2 = document.getElementById('vis2');
+
+    timelineMinor = new vis.Timeline(container2, items, groups, options);
+
+    //document.getElementsByClassName('vis-item').setAttribute('data-toggle', "tooltip");
+    // $(".vis-item").attr('data-toggle', 'tooltip');
+
+    // $('[data-toggle="tooltip"]').tooltip();
+
+
+    timeline.on('select', function (properties){
+      var id = String(properties.items);
+      for(var j=0; j < items.length; j++){
+        if(id == items[j].id){
+          // $( document ).tooltip({
+          //   content: items[j].subGroup,
+          //   track: true
+          // });
+        }    
+      }
+    })
+
+    timeline.on('click', function (properties){
+      if(properties.item != null){
+        var obj = new Object();
+        for(var i=0; i<items.length; i++){
+          if(items[i].id == properties.item){
+            obj = items[i];
+            break;
+          }
+        }
+        var infostr = '<b> Object Name: </b>' + obj.content + '<br>';
+        infostr += '<b> Object Location: </b>' + obj.subGroup + '<br>';
+        infostr += '<b> Object Designation: </b>' + obj.className + '<br>';
+        infostr += '<b> Additional Object Information: </b>' + obj.metadata + '<br>';
+        if(obj.important == 'true'){
+          infostr += 'This object has been marked as <b> Important </b><br>';
+        }
+        console.log(obj);
+        document.getElementById('info').innerHTML = infostr;
+        $('#infoModal').modal();
+      }
+      else{
+        var i = properties.group;
+        var array = [];
+        array.push(contents[i].group)
+        var itemArray = contents[i].items;
+        for(var x=0; x<itemArray.length; x++){
+          var sG = subGroups.indexOf(itemArray[x].subGroup);
+          var color = subGroupsCol[sG].color;
+
+          itemArray[x].style = 'background-color:'+color+'; color:black;';
+        }
+
+        timelineMinor.setData({
+          groups: array,
+          items: itemArray
+        })
+        // timelineMinor.redraw();
+      }
+    })
+
+
+    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+    for(var j=0; j<groupName.length; j++){
+      colors.push(randomColor({
+        luminosity: 'dark',
+        hue: hues[j % 6],
+        seed: j
+      }));
+      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+    }
+
+
+    //make multiple select
+    // selStr = '<select multiple="multiple">'
+    // for(var i=0; i<groupName.length; i++){
+    //   selStr += '<option value="'+i+'">'+groupName[i]+'</option>';
+    // }
+    // selStr += '</select>  <button class="btn btn-primary" onclick="sort()"> Reload Elements </button>';
+    // document.getElementById('select').innerHTML = selStr;
+    // $('select').multipleSelect({
+    //   width: 250
+    // });
+    // $('select').multipleSelect('checkAll');
+
+
+    makeD3Timeline(timeline);
+
+  }
+
+function sort(){
+  var select =  $('select').multipleSelect('getSelects');
+  for(var k=0; k<select.length; k++){
+    select[k] = parseInt(select[k]);
+  }
+  items = [];
+  for(var i=0; i<itemsRef.length; i++){
+    var j = itemsRef[i];
+    if(select.indexOf(j.group) != -1){
+      var obj = new Object();
+      obj.content = j.content;
+      obj.className = j.className;
+      obj.group = j.group;
+      obj.start = j.start;
+      obj.subGroup = j.subGroup;
+      items.push(obj);
+    }
+
+  }
+  var selectGroup = [];
+  for(var d=0; d<select.length; d++){
+    for(var e=0; e<groups.length; e++){
+      if(select[d] == groups[e].id){
+        selectGroup.push(groups[e]);
+      }
+    }
+  }
+  timeline.setData({
+    items: items,
+    groups: selectGroup
+  });
+  
+  timeline.redraw();
+
+  timeline.setWindow(min, max);
+
+
+  timeline.on('changed', function(){
+    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+    for(var j=0; j<groupName.length; j++){
+      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+    }
+  })
+
+
+  makeD3Timeline(timeline);
+
+}
+
+function sortImportant(bool){
+  // if(bool){
+  //   var btn = '<button type="button" onclick="sortImportant('+false+')" class="btn btn-default">Show All</button>'
+  //   document.getElementById('showImpt').innerHTML = btn;
+  //   var imptGroups = [];
+  //   for(var i=0; i<importantList.length; i++){
+  //     console.log(importantList[i])
+  //     if(imptGroups.indexOf(importantList[i].group) == -1){
+  //       var group = new Object();
+  //       group.id = importantList[i].group;
+  //       group.content = importantList[i].className;
+  //       imptGroups.push(group);
+  //     }
+  //   }
+  //   console.log(imptGroups);
+  //   timeline.setData({
+  //     items: importantList,
+  //     // groups: imptGroups
+  //   })
+
+  //   timeline.setWindow(min, max);
+  //   timeline.on('changed', function(){
+  //     var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+  //     for(var j=0; j<groupName.length; j++){
+  //       $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+  //     }
+  //   })
+
+  // }
+  // else{
+  //   timeline.setData({
+  //     items: itemsRef,
+  //     groups: groups
+  //   })
+  //   var btn = '<button type="button" onclick="sortImportant('+true+')" class="btn btn-default">Show Important</button>'
+  //   document.getElementById('showImpt').innerHTML = btn;
+  //   timeline.setWindow(min, max);
+  //   timeline.on('changed', function(){
+  //     var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+  //     for(var j=0; j<groupName.length; j++){
+  //       $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+  //     }
+  //   })
+  // }
+
+}
+
+function makeD3Timeline(timeline){
+  //   d3.select("#tl2").remove();
+
+  //   var testData = [];
+  //   var temp2 = [];
+  //   for(var x=0; x< colors.length; x++){
+  //     temp2 =[];
+  //     var times = new Object();
+  //     times.label = groupName[x];
+  //     if(times.label == null){
+  //       break;
+  //     }
+  //     for (var y=0; y<items.length; y++){
+  //       var s = items[y];
+  //       if(s.className == groupName[x]){
+  //         var point = new Object();
+  //         point.color = colors[x];
+  //         point.name = s.content;
+  //         point.id = s.id;
+  //         point.starting_time = new Date(s.start).getTime();
+  //         point.state = s.subGroup;
+  //         temp2.push(point);  
+  //       }
+  //       times.times = temp2;
+  //     }
+  //     testData.push(times);
+  //   }
+  //  var tooltip = d3.select("#timeline2")
+  //       .append("div")
+  //       .style("position", "absolute")
+  //       .style("z-index", "10")
+  //       .style("visibility", "hidden")
+  //       .style("opacity", 0.5)
+  //       .style("font-size", "0.75em")
+  //       .text("a simple tooltip");
+
+  // var chart = d3.timeline()
+  // .tickFormat( //
+  // {
+  //   format: d3.time.format("%Y"),
+  //   tickTime: d3.time.years,
+  //   tickInterval: 5,
+  //   tickSize: 10
+  // })
+  // .stack()
+  // .itemHeight(10)
+  // .itemMargin(2)
+  // .mouseover(function(d, i, datum) {
+  //   var dd = new Date(d.starting_time);
+  //   var info = d.name + ' National '+ datum.label + ' - '+ d.state+' - '+ monthName(dd.getMonth()) + ' '+dd.getDate()+', '+dd.getFullYear();
+  //   return tooltip.style("visibility", "visible").text(info).style("left", event.clientX+'px').style("top", event.clientY+'px');
+  // })
+  // .mouseout(function(d, i, datum) {
+  //   return tooltip.style("visibility", "hidden");
+  // })
+  // .click(function(d, i, datum){
+  //   timeline.focus(d.id, {animation: {duration: 2000, easingFunction: 'linear'}});
+  // })
+  // .ending(new Date(items[items.length-1].start).getTime())
+  // .display("circle"); // toggle between rectangles and circles
+
+  // var svg = d3.select("#timeline2").append("svg").attr("width", width).attr("fill-opacity", .4).attr("align", "center").attr("id", "tl2")
+  // .datum(testData).call(chart);
+}
+</script>
+
+
+</body>
+</html>
