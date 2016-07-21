@@ -34,6 +34,14 @@ def index():
 def data():
     return jsonify(get_data())
 
+@app.route('/spanData')
+def spanData():
+    return jsonify(get_span())
+
+@app.route('/grain')
+def grain():
+    return render_template('grain.html')
+
 @app.route("/timeline/")
 def after():
     return render_template('timeline.html')
@@ -83,7 +91,6 @@ def editrec():
     return render_template('timeline.html')
 
 
-
 def get_data():
     cur2 = g.db.cursor()
     rows = cur2.execute("SELECT * FROM timelineNPS2").fetchall()
@@ -100,6 +107,22 @@ def get_data():
 
         })
     return RESULTS
+
+def get_span():
+    curv = g.db.cursor()
+    rows = curv.execute("SELECT * FROM spandata").fetchall()
+    result = []
+    for i in rows:
+        result.append({
+            'id': i[0],
+            'content' : i[1],
+            'start' : i[2],
+            'end' : i[3],
+            'parent' : i[4],
+            'className' : i[5]
+        })
+    return result
+
 
 def dateformat(date):
     year = date[:4]

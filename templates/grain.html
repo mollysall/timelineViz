@@ -1,0 +1,260 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <title>Timeline</title>
+  <link rel="icon" href="{{url_for('static', filename='calendar.png')}}"></link>
+
+  <script src="{{ url_for('static', filename='js/jquery.js')}}"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.0/jquery.min.js"></script>
+
+  <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
+  <script src="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js"></script>
+  <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
+
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.4/moment.min.js"></script>
+
+
+  <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}"/>
+
+  <script src="{{ url_for('static', filename='js/jquery-ui.min.js')}}"></script>
+
+    <script src="{{ url_for('static', filename='js/tether.min.js')}}"></script>
+
+
+  <script src="{{ url_for('static', filename='js/randomColor.js')}}"></script>
+
+  <script src="{{ url_for('static', filename='js/vis.min.js')}}"></script>
+  <link rel="stylesheet" href="{{url_for('static', filename='css/vis.css')}}"/>
+
+  <script src="{{ url_for('static', filename='js/d3.v3.js')}}"></script>
+  <script src="{{ url_for('static', filename='js/d3-timeline.js')}}"></script>
+
+  <script src="{{ url_for('static', filename='js/multiple-select.js')}}"></script>
+  <link href="{{  url_for('static', filename='css/multiple-select.css')}}" rel="stylesheet" />
+
+
+
+</head>
+<style>
+
+.vis-item .vis-item-overflow {
+  overflow: visible;
+}
+
+</style>
+<body>
+
+  <div class="container" style='font-family:"Gill Sans", "Gill Sans MT"; left: 0px'>
+    <ul class="nav nav-pills nav-justified">
+      <li><a href="/" title="Home" data-toggle="tooltip">Home</a></li>
+      <li><a href="/timeline"> Point Timeline </a></li>
+    </ul>
+  </div>
+<br>
+
+<div class="container">
+
+  <!-- Trigger the modal with a button -->
+
+  <!-- Add Modal -->
+  <div class="modal fade" id="addModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-plus"></span> Add an Object</h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+          <form role="form" id="addObj" action="{{ url_for('addrec') }}" method="POST">
+            <!--             <form role="form" id="addObj">  -->                    
+            <div class="form-group">
+              <label for="name"> New Object Name</label>
+              <input type="text" class="form-control" name="name" id="name" placeholder="Object Name">
+            </div>
+            <div class="form-group">
+              <label for="state">New Object Location</label>
+              <input type="text" class="form-control" id="state" name="state" placeholder="US State or Territory">
+            </div>
+            <div class="form-group">
+              <label for="metadata"> New Object MetaData </label><br> <textarea class="form-control" name="meta" placeholder="Description of Object" rows="4" cols="50"></textarea><br>
+            </div>
+            <div class="form-group" id="des"> </div>
+            <div class="form-group" id="date"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success btn-default pull-left" value="submit" id="addsub"><span class="glyphicon glyphicon-ok"></span> Add Object</button>
+            <button type="cancel" class="btn btn-danger btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-remove"></span> Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!--         Remove Modal-->        
+  <div class="modal fade" id="rmModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-trash"></span> Delete an Object</h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+          <form role="form" action="{{ url_for('rmrec')}}" method="POST">
+            <div id='rm'></div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit"  id="rmsub" class="btn btn-success btn-default pull-left" value="submit"><span class="glyphicon glyphicon-ok"></span> Delete Object</button>
+            <button type="cancel" class="btn btn-danger btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-remove"></span> Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!--   Information Modal -->
+ <div class="modal fade" id="infoModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-info-sign"></span> Object Information </h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+            <div id='info'></div>
+          </div>
+          <div class="modal-footer">
+            <button type="cancel" class="btn btn-info btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-ok"></span> Close </button>
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Update Modal -->
+  <div class="modal fade" id="updateModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-pencil"></span> Edit an Object</h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+          <form role="form" action="{{ url_for('editrec') }}" method="POST">
+
+            <div id='up'></div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit"  id="upsub" class="btn btn-success btn-default pull-left" data-target="#"><span class="glyphicon glyphicon-ok"></span> Update Object</button>
+            <button type="cancel" class="btn btn-danger btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-remove"></span> Cancel</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+</div>
+
+<div text-align="center">
+  <div id="timeline2" style="text-align:center; border: 0;"></div>
+  <div align="center" id="showImpt" ></div><div align="center" id="select"></div>
+</div>
+<br>
+<div id="container"></div>
+
+
+<script type="text/javascript">
+
+  var items = [
+    {id: 1, content: 'item 1', start: '2014-04-20'},
+    {id: 2, content: 'item 2', start: '2014-04-14'},
+    {id: 3, content: 'item 3', start: '2014-04-18'},
+    {id: 4, content: 'item 4', start: '2014-04-16', end: '2014-04-19'},
+    {id: 5, content: 'item 5', start: '2014-04-25'},
+    {id: 6, content: 'item 6', start: '2014-04-27', type: 'point'}
+  ];
+
+
+  // Configuration for the Timeline
+  var options = {
+    height: 500
+      };
+
+  // Create a Timeline
+  var timeline = new vis.Timeline(container, items, options);
+
+  timeline.on('rangechanged', function(properties){
+    var rg = timeline.getWindow();
+    combineItems(items, rg);
+  })
+
+  var ran = timeline.getItemRange();
+  console.log(ran);
+
+  function combineItems(items, range){
+    var years = [];
+    var combined = [];
+    for(var i=0; i<items.length; i++){
+      var dt = new Date(items[i].start);
+      var yr = dt.getFullYear();
+      if(years.indexOf(yr) == -1){
+              years.push(yr);
+
+      }
+    }
+    bMin = new Date(range.start);
+    bMax = new Date(range.end);
+    console.log(bMin.getFullYear() +', '+bMax.getFullYear());
+    if(bMin.getFullYear() != bMax.getFullYear()){
+      for(var i=0; i<years.length; i++){
+        var temp = [];
+        console.log(min +', ' +max);
+        for(var j=0; j<items.length; j++){
+          var dt = new Date(items[j].start)
+          if(dt.getFullYear() == years[i]){
+            temp.push(items[j]);
+          }
+        }
+        var min = temp[0].start;
+        var max = temp[temp.length-1].start;
+        for(var j=0; j<temp.length; j++){
+          minD = new Date(min)
+          maxD = new Date(max);
+          var dtS = new Date(temp[j].start);
+          var dtE = new Date(temp[j].end);
+          if(minD.getTime() > dtS.getTime()){
+            min = temp[j].start;
+          }
+          if(maxD.getTime() < dtS.getTime()){
+            max = temp[j].start;
+          }
+          if(maxD.getTime() < dtE.getTime()){
+            max = temp[j].end;
+          }
+        }
+        var obj = new Object();
+        obj.subItems = temp;
+        obj.start = min
+        obj.end = max
+        obj.content = 'Collasped Items: ' + temp.length;
+        combined.push(obj);
+      }
+      console.log(combined);
+      timeline.setData({
+        items: combined
+      })
+
+    }
+    else{
+      timeline.setData({
+        items: items
+      })
+    }
+
+  }
+  
+</script>
+
+
+</body>
+</html>

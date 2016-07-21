@@ -37,6 +37,10 @@
 </head>
 <style>
 
+.vis-item .vis-item-overflow {
+  overflow: visible;
+}
+
 </style>
 
 <body>
@@ -45,8 +49,8 @@
     <ul class="nav nav-pills nav-justified">
       <li><a href="/" title="Home" data-toggle="tooltip">Home</a></li>
       <li><a href="/timeline"> Point Timeline </a></li>
-      <li class="active"><a href="/span"> Span Timeline </a></li>
-    </ul>
+<!--       <li class="active"><a href="/span"> Span Timeline </a></li>
+ -->    </ul>
   </div>
 <br>
 
@@ -167,10 +171,7 @@
   // DOM element where the Timeline will be attached
   var container = document.getElementById('visualization');
 
-  var info = d3.json("/data", makeData);
-  var width = 1000;
-  var groupName = [];
-  var groups = [];
+  var info = d3.json("/spanData", makeData);
   var colors = [];
   var itemsRef = [];
   var items = [];
@@ -179,8 +180,7 @@
   var min, max;
   var importantList = [];
   var contents = [];
-  var subGroups = [];
-  var subGroupsCol = [];
+
 
 
   //Takes in a number between 0-11 and returns the month as a string
@@ -236,99 +236,65 @@ function makeData(theEvents){
   function makeTimeline(theEvents){
     items = theEvents;
 
-    for(var i=0; i<items.length; i++){
-      if(groupName.indexOf(items[i].className) == -1){
-        groupName.push(items[i].className);
-      }
-    }
-
-    groupName.sort();
-
-    for(var k =0; k< groupName.length; k++){
-      var g = new Object();
-      g.content = groupName[k];
-      g.id = k;
-      g.value = k;
-      groups.push(g);
-    }
-
-    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'monochrome'];
-    for(var g=0; g<items.length; g++){
-      var gn = items[g].group;
-      items[g].group = groupName.indexOf(gn);
-      var str = items[g].content+" National "+items[g].className+" - " +items[g].subGroup +' - ' + items[g].start + ' - ' + items[g].metadata;
-      items[g].title = str;
-      if(items[g].important == 'true'){
-        importantList.push(items[g]);
-      }
-      var sub = items[g].subGroup;
-      if(subGroups.indexOf(sub) == -1){
-       var s = new Object();
-       s.subGroup = sub;
-       s.color = randomColor({
-        luminosity: 'light',
-        hue: hues[g % 7],
-        seed: g
-      })
-
-       subGroups.push(sub);
-       subGroupsCol.push(s);
-      }
-    }
-
-
-    for(var a =0; a<importantList.length; a++){
-      importantList[a].style = "font-weight:bold; outline-style:solid; outline-color:lightgrey;";
-    }
-
-    // if(importantList.length==0){
-    //   var btn = '<button type="button" class="btn btn-default disabled">Show Important</button>'
-    //   document.getElementById('showImpt').innerHTML = btn;
-    // }
-    // else{
-    //   var btn = '<button type="button" onclick="sortImportant('+true+')" class="btn btn-default">Show Important</button>'
-    //   document.getElementById('showImpt').innerHTML = btn;
-    // }
-
     if(start){
       itemsRef = items;
       start = false;
     }
 
-    for(var a=0; a<groups.length; a++){
-      var g = new Object();
-      g.id = groups[a].id;
-      g.group = groups[a];
-      var tem = [];
-      for(var b=0; b<items.length; b++){
-        if(items[b].group == g.group.id){
-          tem.push(items[b]);
-        }
+    var groups = [];
+
+    for(var k=0; k<items.length; k++){
+      if(items[k].end.length == 0){
+        items[k].type = 'point';
       }
-      g.items = tem;
-      contents.push(g);
+      if(items[k].parent == '0'){
+        // items[k].type = 'background';
+      }
+      if(groups.indexOf(items[k].className) == -1){
+        groups.push(items[k].className);
+      }
     }
 
+    console.log(groups);    
+    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+    for(var j=0; j<groups.length; j++){
+      colors.push(randomColor({
+        luminosity: 'light',
+        hue: hues[j % 6],
+        seed: j
+      }));
+      // $(".vis-item."+groups[j]).css('background-color', colors[j]).css('color', 'white');
+      // console.log(groups[j]+', '+colors[j]);
+    }
 
+    for(var k=0; k<items.length; k++){
+      if(items[k].type != 'point'){
+        items[k].style = 'background-color:'+colors[groups.indexOf(items[k].className)];
+      }
+      else{
+        // items[k].style = 'color:'+colors[groups.indexOf(items[k].className)];
+      }
+    }
 
     min = new Date(items[0].start).getTime() - 604800000*52*10;
-    max = new Date(items[items.length-1].start).getTime() +604800000*52*10;
+    max = new Date(items[items.length-1].start).getTime()+604800000*52*10;
+
+
+    // for(var j=0; j<groups.length;j++){
+    //   console.log(groups[j]);
+    //   console.log(colors[j]);
+    //   $('.vis-item.'+groups[j]).css('color', colors[j]);
+
+    // }
+
 
 
     var optionsMajor = {
-       height: '350px',
+      height: '750px',
       min: min,
       max: max,
       clickToUse: true,
       zoomMin: 604800000*4*30,
-      groupOrder: function (a, b) {
-        return a.value - b.value;
-      },
-      groupOrderSwap: function (a, b, groups) {
-        var v = a.value;
-        a.value = b.value;
-        b.value = v;
-      },
       showCurrentTime: false
 
     }
@@ -341,14 +307,6 @@ function makeData(theEvents){
       max: max,
       clickToUse: true,
       zoomMin: 604800000*4*30,
-      groupOrder: function (a, b) {
-        return a.value - b.value;
-      },
-      groupOrderSwap: function (a, b, groups) {
-        var v = a.value;
-        a.value = b.value;
-        b.value = v;
-      },
       showCurrentTime: false,
       groupEditable: true,
       editable: {
@@ -360,15 +318,15 @@ function makeData(theEvents){
 
       onAdd: function (item, callback) {
         desSTR ='<label for="des">Designation</label><br><select id="desSel" class="form-control" name="designation">';
-        for(var i=0; i<groupName.length; i++){
-          if(item.group == i){
-            desSTR += '<option selected="selected" value="'+groupName[i]+'">'+groupName[i] +'</option>';
+        // for(var i=0; i<groupName.length; i++){
+        //   if(item.group == i){
+        //     desSTR += '<option selected="selected" value="'+groupName[i]+'">'+groupName[i] +'</option>';
 
-          }
-          else{
-            desSTR += '<option value="'+groupName[i]+'">'+groupName[i] +'</option>';
-          }
-        }
+        //   }
+        //   else{
+        //     desSTR += '<option value="'+groupName[i]+'">'+groupName[i] +'</option>';
+        //   }
+        // }
         desSTR += '</select>';
         document.getElementById('des').innerHTML = desSTR;
         var day, month, year;
@@ -426,7 +384,7 @@ function makeData(theEvents){
               });
               makeD3Timeline(timeline);
               console.log(item)
-              $(".vis-item."+groupName[item.group]).css('background-color', colors[item.group]).css('color', 'white');
+              // $(".vis-item."+groupName[item.group]).css('background-color', colors[item.group]).css('color', 'white');
               callback(item);
 
             }
@@ -556,11 +514,11 @@ function makeData(theEvents){
     };
 
     // Create a Timeline
-    timeline = new vis.Timeline(container, items, groups, optionsMajor);
+    timeline = new vis.Timeline(container, items, optionsMajor);
 
     var container2 = document.getElementById('vis2');
 
-    timelineMinor = new vis.Timeline(container2, items, groups, options);
+    // timelineMinor = new vis.Timeline(container2, items, options);
 
     //document.getElementsByClassName('vis-item').setAttribute('data-toggle', "tooltip");
     // $(".vis-item").attr('data-toggle', 'tooltip');
@@ -600,36 +558,37 @@ function makeData(theEvents){
         document.getElementById('info').innerHTML = infostr;
         $('#infoModal').modal();
       }
-      else{
-        var i = properties.group;
-        var array = [];
-        array.push(contents[i].group)
-        var itemArray = contents[i].items;
-        for(var x=0; x<itemArray.length; x++){
-          var sG = subGroups.indexOf(itemArray[x].subGroup);
-          var color = subGroupsCol[sG].color;
+      else if(properties.what = "background"){
+        console.log(properties);
+        // var i = properties.group;
+        // var array = [];
+        // array.push(contents[i].group)
+        // var itemArray = contents[i].items;
+        // for(var x=0; x<itemArray.length; x++){
+        //   var sG = subGroups.indexOf(itemArray[x].subGroup);
+        //   var color = subGroupsCol[sG].color;
 
-          itemArray[x].style = 'background-color:'+color+'; color:black;';
-        }
+        //   itemArray[x].style = 'background-color:'+color+'; color:black;';
+        // }
 
-        timelineMinor.setData({
-          groups: array,
-          items: itemArray
-        })
+        // timelineMinor.setData({
+        //   groups: array,
+        //   items: itemArray
+        // })
         // timelineMinor.redraw();
       }
     })
 
 
     var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
-    for(var j=0; j<groupName.length; j++){
-      colors.push(randomColor({
-        luminosity: 'dark',
-        hue: hues[j % 6],
-        seed: j
-      }));
-      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-    }
+    // for(var j=0; j<groupName.length; j++){
+    //   colors.push(randomColor({
+    //     luminosity: 'dark',
+    //     hue: hues[j % 6],
+    //     seed: j
+    //   }));
+    //   $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+    // }
 
 
     //make multiple select
@@ -686,12 +645,12 @@ function sort(){
   timeline.setWindow(min, max);
 
 
-  timeline.on('changed', function(){
-    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
-    for(var j=0; j<groupName.length; j++){
-      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-    }
-  })
+  // timeline.on('changed', function(){
+  //   var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+  //   for(var j=0; j<groupName.length; j++){
+  //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+  //   }
+  // })
 
 
   makeD3Timeline(timeline);

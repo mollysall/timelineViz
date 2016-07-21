@@ -13,7 +13,6 @@
 
   <script src="http://cdnjs.cloudflare.com/ajax/libs/moment.js/2.8.4/moment.min.js"></script>
 
-
   <link rel="stylesheet" href="{{url_for('static', filename='css/style.css')}}"/>
 
   <script src="{{ url_for('static', filename='js/jquery-ui.min.js')}}"></script>
@@ -45,8 +44,8 @@
     <ul class="nav nav-pills nav-justified">
       <li><a href="/" title="Home" data-toggle="tooltip">Home</a></li>
       <li class="active"><a href="/timeline"> Point Timeline </a></li>
-      <li><a href="/span"> Span Timeline </a></li>
-    </ul>
+<!--       <li><a href="/span"> Span Timeline </a></li>
+ -->    </ul>
   </div>
 <br>
 
@@ -224,6 +223,8 @@ function monthName(num) {
   }
 }
 
+
+//creates global itemsRef which contains the raw database data, sorted chronologically
 function makeData(theEvents){
   itemsRef = theEvents;
   itemsRef.sort(function(a,b) { 
@@ -232,17 +233,21 @@ function makeData(theEvents){
   makeTimeline(itemsRef);
 }
 
+
+//make the acutal timeline
   function makeTimeline(theEvents){
+    //items is a global variable and can contain different things
     items = theEvents;
 
+    //creates an array of groups
     for(var i=0; i<items.length; i++){
       if(groupName.indexOf(items[i].className) == -1){
         groupName.push(items[i].className);
       }
     }
-
+    //sorting the group names keeps colors consistens
     groupName.sort();
-
+    //creates group object with content, value and id and pushes it to groups
     for(var k =0; k< groupName.length; k++){
       var g = new Object();
       g.content = groupName[k];
@@ -251,36 +256,41 @@ function makeData(theEvents){
       groups.push(g);
     }
 
+    //creates array of colors.  objects are colored by which group they belong to, using randomcolor() generation
     var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'monochrome'];
     for(var g=0; g<items.length; g++){
       var gn = items[g].group;
+      //turns group based into a number
       items[g].group = groupName.indexOf(gn);
+      //generates title for objects
       var str = items[g].content+" National "+items[g].className+" - " +items[g].subGroup +' - ' + items[g].start + ' - ' + items[g].metadata;
       items[g].title = str;
       if(items[g].important == 'true'){
+        //if object is important, push to importantlist
         importantList.push(items[g]);
       }
     }
 
-
+    //style all important items
     for(var a =0; a<importantList.length; a++){
       importantList[a].style = "font-weight:bold;";
     }
-
+    //generate grayed out important button if importantlist is empty
     if(importantList.length==0){
       var btn = '<button type="button" class="btn btn-default disabled">Show Important</button>'
       document.getElementById('showImpt').innerHTML = btn;
     }
+    //active important button
     else{
       var btn = '<button type="button" onclick="sortImportant('+true+')" class="btn btn-default">Show Important</button>'
       document.getElementById('showImpt').innerHTML = btn;
     }
-
+    //on intiakization, itemsref = items
     if(start){
       itemsRef = items;
       start = false;
     }
-
+    
     for(var a=0; a<groups.length; a++){
       var g = new Object();
       g.id = groups[a].id;
@@ -428,6 +438,8 @@ function makeData(theEvents){
               $('input').val('');
               $('textarea').val('');
 
+              makeD3Timeline();
+
 
               callback(item);
 
@@ -470,7 +482,7 @@ function makeData(theEvents){
       }
       // upSTR += '<input type="hidden" name="important" id="impt" value="false" checked>'
       document.getElementById("up").innerHTML = upSTR;
-      var ids = [];
+      // var ids = [];
       $('#updateModal').modal();
       // $('#upsub').click(function(e){
       //   item.content = $('#upName').val();
@@ -507,36 +519,39 @@ function makeData(theEvents){
           },
           success: function(){
             $('#updateModal').modal('hide');
-            var last = ids.length -1;
-            if(ids.indexOf(item.id) == last){
+            // var last = ids.length -1;
+            // if(ids.indexOf(item.id) == last){
               item.content = $('#upName').val();
               item.subGroup = $('#upState').val();
               item.start = $('#upDate').val();
               item.metadata = $('#upMeta').val();
-              item.important =  $('#impt').prop("checked");
-              ids.push(item.id);
-              for(var i=0; i<items.length; i++){
-                if(items[i].id == item.id){
-                  items[i] = item;
-                }
-                break;
-              }
-              items.sort(function(a,b) { 
-                return new Date(a.start).getTime() - new Date(b.start).getTime() 
-              });
-              if(item.important == 'true' || item.important){
-                item.style = 'font-weight:bold;';
+              item.important =  $('#impt').prop("checked").toString();
+              // ids.push(item.id);
+              if(item.important == 'true'){
+                item.style = 'font-weight:bold;color:white;background-color:'+colors[item.group]+';';
               }
               else{
-                item.style = '';
+                item.style = 'color:white;background-color:'+colors[item.group]+';';
               }
+              // for(var i=0; i<items.length; i++){
+              //   if(items[i].id == item.id){
+              //     items[i] = item;
+              //     console.log(items[i]);
+              //   }
+              //   break;
+              // }
+              // items.sort(function(a,b) { 
+              //   return new Date(a.start).getTime() - new Date(b.start).getTime() 
+              // });
+
               // makeImportant();
               makeD3Timeline();
               // $('input').val('');
 
+              console.log(item);
               callback(item);
 
-            }
+            // }
 
 
           }
@@ -734,13 +749,14 @@ function sortImportant(bool){
   if(bool){
       var btn = '<button type="button" onclick="sortImportant('+false+')" class="btn btn-default">Show All</button>'
       document.getElementById('showImpt').innerHTML = btn;
-      var imptGroups = [];
+      // var imptGroups = [];
       var importantList = [];
-      for(var k=0; k<items.length; k++){
-        if(items[k].important == 'true' || items[k].important == true){
-          importantList.push(items[k]);
-        }
-      }
+      // for(var k=0; k<items.length; k++){
+      //   if(items[k].important == 'true' || items[k].important == true){
+      //     console.log(items[k]);
+      //     importantList.push(items[k]);
+      //   }
+      // }
       for(var i=0; i<importantList.length; i++){
         if(imptGroups.indexOf(importantList[i].group) == -1){
           var group = new Object();
@@ -756,7 +772,6 @@ function sortImportant(bool){
 
       timeline.setWindow(min, max);
       timeline.on('changed', function(){
-        var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
         for(var j=0; j<groupName.length; j++){
           $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
         }
