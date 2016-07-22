@@ -165,14 +165,23 @@
 
 <script type="text/javascript">
 
-  var items = [
-    {id: 1, content: 'item 1', start: '2014-04-20'},
-    {id: 2, content: 'item 2', start: '2014-04-14'},
-    {id: 3, content: 'item 3', start: '2014-04-18'},
-    {id: 4, content: 'item 4', start: '2014-04-16', end: '2014-04-19'},
-    {id: 5, content: 'item 5', start: '2014-04-25'},
-    {id: 6, content: 'item 6', start: '2014-04-27', type: 'point'}
+
+  var groups = [
+    {id: 1, content: 'a'},
+    {id: 2, content: 'b'}
   ];
+
+  var items = [
+  {id: 1, content: 'item 1', start: '2014-04-20', group:1},
+  {id: 2, content: 'item 2', start: '2014-04-14', group:1},
+  {id: 3, content: 'item 3', start: '2014-04-18', group:2},
+  {id: 4, content: 'item 4', start: '2014-04-16', end: '2014-04-19', group:2},
+  {id: 5, content: 'item 5', start: '2014-04-25', group:1},
+  {id: 6, content: 'item 6', start: '2014-04-27', type: 'point', group:2},
+  {id: 7, content: 'item 7', start: '2015-01-23', group:1},
+  {id: 8, content: 'item 8', start: '2014-07-4', group:2}
+  ];
+
 
 
   // Configuration for the Timeline
@@ -181,7 +190,7 @@
       };
 
   // Create a Timeline
-  var timeline = new vis.Timeline(container, items, options);
+  var timeline = new vis.Timeline(container, items, groups, options);
 
   timeline.on('rangechanged', function(properties){
     var rg = timeline.getWindow();
@@ -198,47 +207,60 @@
       var dt = new Date(items[i].start);
       var yr = dt.getFullYear();
       if(years.indexOf(yr) == -1){
-              years.push(yr);
+        years.push(yr);
 
       }
     }
     bMin = new Date(range.start);
     bMax = new Date(range.end);
-    console.log(bMin.getFullYear() +', '+bMax.getFullYear());
     if(bMin.getFullYear() != bMax.getFullYear()){
-      for(var i=0; i<years.length; i++){
-        var temp = [];
-        console.log(min +', ' +max);
-        for(var j=0; j<items.length; j++){
-          var dt = new Date(items[j].start)
-          if(dt.getFullYear() == years[i]){
-            temp.push(items[j]);
+      for(var k=0; k<groups.length; k++){
+        for(var i=0; i<years.length; i++){
+          var temp = [];
+          for(var j=0; j<items.length; j++){
+            var dt = new Date(items[j].start)
+            if(dt.getFullYear() == years[i] && groups[k].id == items[j].group ){
+              temp.push(items[j]);
+
+            }
+          }
+          if(temp.length > 0){
+            var min = temp[0].start;
+            var max = temp[temp.length-1].start;
+            for(var j=0; j<temp.length; j++){
+              minD = new Date(min)
+              maxD = new Date(max);
+              var dtS = new Date(temp[j].start);
+              var dtE = new Date(temp[j].end);
+              if(minD.getTime() > dtS.getTime()){
+                min = temp[j].start;
+              }
+              if(maxD.getTime() < dtS.getTime()){
+                max = temp[j].start;
+              }
+              if(maxD.getTime() < dtE.getTime()){
+                max = temp[j].end;
+              }
+            }
+            var obj = new Object();
+            obj.subItems = temp;
+            obj.start = min
+            obj.end = max
+            obj.group = groups[k].id;
+            obj.content = 'Collasped Items: ' + temp.length;
+            if(temp.length > 1){
+              combined.push(obj);
+            }
+            else{
+              if(temp[0].group == groups[k].id){
+                combined.push(temp[0]);
+
+              }
+            }
           }
         }
-        var min = temp[0].start;
-        var max = temp[temp.length-1].start;
-        for(var j=0; j<temp.length; j++){
-          minD = new Date(min)
-          maxD = new Date(max);
-          var dtS = new Date(temp[j].start);
-          var dtE = new Date(temp[j].end);
-          if(minD.getTime() > dtS.getTime()){
-            min = temp[j].start;
-          }
-          if(maxD.getTime() < dtS.getTime()){
-            max = temp[j].start;
-          }
-          if(maxD.getTime() < dtE.getTime()){
-            max = temp[j].end;
-          }
-        }
-        var obj = new Object();
-        obj.subItems = temp;
-        obj.start = min
-        obj.end = max
-        obj.content = 'Collasped Items: ' + temp.length;
-        combined.push(obj);
       }
+
       console.log(combined);
       timeline.setData({
         items: combined

@@ -36,6 +36,10 @@
 </head>
 <style>
 
+.vis-item .vis-item-overflow {
+  overflow: visible;
+}
+
 </style>
 
 <body>
@@ -627,6 +631,11 @@ function makeData(theEvents){
       }
     })
 
+    timeline.on('rangechanged', function(properties){
+      var rg = timeline.getWindow();
+      combineItems(items, rg);
+    })
+
     // timeline.on('click', function (properties){
     //   if(properties.item != null){
     //     var obj = new Object();
@@ -795,6 +804,86 @@ function sortImportant(bool){
     }
 
 }
+
+  function combineItems(items, range){
+    var years = [];
+    var combined = [];
+    for(var i=0; i<items.length; i++){
+      var dt = new Date(items[i].start);
+      var yr = dt.getFullYear();
+      if(years.indexOf(yr) == -1){
+        years.push(yr);
+
+      }
+    }
+    bMin = new Date(range.start);
+    bMax = new Date(range.end);
+    if(bMax.getFullYear() - bMin.getFullYear() > 40 ){
+      for(var k=0; k<groups.length; k++){
+        for(var i=0; i<years.length; i++){
+          var temp = [];
+          for(var j=0; j<items.length; j++){
+            var dt = new Date(items[j].start)
+            if(dt.getFullYear() == years[i] && groups[k].id == items[j].group ){
+              temp.push(items[j]);
+
+            }
+          }
+          if(temp.length > 0){
+            var min = temp[0].start;
+            var max = temp[temp.length-1].start;
+            for(var j=0; j<temp.length; j++){
+              minD = new Date(min)
+              maxD = new Date(max);
+              var dtS = new Date(temp[j].start);
+              var dtE = new Date(temp[j].end);
+              if(minD.getTime() > dtS.getTime()){
+                min = temp[j].start;
+              }
+              if(maxD.getTime() < dtS.getTime()){
+                max = temp[j].start;
+              }
+              if(maxD.getTime() < dtE.getTime()){
+                max = temp[j].end;
+              }
+            }
+            var obj = new Object();
+            obj.subItems = temp;
+            obj.start = min
+            obj.end = max
+            obj.group = groups[k].id;
+            obj.style = 'background-color:'+colors[k];
+            obj.content = 'Collasped Items: ' + temp.length;
+            if(temp.length > 1){
+              combined.push(obj);
+            }
+            else{
+              if(temp[0].group == groups[k].id){
+                temp[0].style = 'background-color:'+colors[k]+';color:white;';
+                combined.push(temp[0]);
+
+              }
+            }
+          }
+        }
+      }
+      timeline.setData({
+        items: combined
+      })
+
+    }
+    else{
+      timeline.setData({
+        items: items
+      })
+          for(var j=0; j<groupName.length; j++){
+      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+    }
+      
+    }
+
+  }
+
 
 function makeD3Timeline(timeline){
     d3.select("#tl2").remove();
