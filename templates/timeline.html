@@ -118,10 +118,10 @@
       <!-- Modal content-->
       <div class="modal-content">
         <div class="modal-header">
-          <h4 class="modal-title"><span class="glyphicon glyphicon-info-sign"></span> Object Information </h4>
+          <h4 class="modal-title"><span class="glyphicon glyphicon-info-sign"></span> Collapsed Items </h4>
         </div>
         <div class="modal-body" style="padding:40px 50px;">
-            <div id='info'></div>
+            <div style="width:500px;height:200px;overflow:auto;padding:5px;" id='info'></div>
           </div>
           <div class="modal-footer">
             <button type="cancel" class="btn btn-info btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-ok"></span> Close </button>
@@ -154,11 +154,37 @@
   </div>
 
 
+  <!-- Options Modal -->
+  <div class="modal fade" id="optionsModal" role="dialog">
+    <div class="modal-dialog">
+      <!-- Modal content-->
+      <div class="modal-content">
+        <div class="modal-header">
+          <h4 class="modal-title"><span class="glyphicon glyphicon-cog"></span> Display Options </h4>
+        </div>
+        <div class="modal-body" style="padding:40px 50px;">
+        <h4>Toggle Collapse</h4>
+          <div id="toggleCol"><input type="checkbox" id="toggle" value="toggle" checked>Collapse Items<br></div> 
+          <h4> Display Important Items </h4>
+          <div id="showImpt" >
+          </div>
+          <h4> Change Selection </h4>
+          <div id="select"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-success pull-left" onclick="sort()"> <span class="glyphicon glyphicon-ok-sign"></span> Make Changes </button>
+          <button type="cancel" class="btn btn-danger btn-default pull-left" data-dismiss="modal"><span class="glyphicon glyphicon-remove-sign"></span> Close </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
 </div>
 
 <div text-align="center">
   <div id="timeline2" style="text-align:center; border: 0;"></div>
-  <div align="center" id="showImpt" ></div><div align="center" id="select"></div>
+<div align="center"><button type="button" onclick="options()" class="btn btn-info">Options</button></div>
 </div>
 <br>
 <div id="visualization"></div>
@@ -173,6 +199,7 @@
   var groupName = [];
   var groups = [];
   var colors = [];
+  var prevNum = 0;
   var itemsRef = [];
   var items = [];
   var start = true;
@@ -183,7 +210,24 @@
   var subGroups = [];
   var subGroupsCol = [];
   var upCounter = 0;
+  var range;
+  var imp = true;
+  var col = true;
+  var selectLen = 0;
 
+//loops through range and returns number of items in range
+function getItemsInRange(min, max, range){
+  var maxR = new Date(max).getTime()
+  var minR = new Date(min).getTime()
+  var c = 0;
+  for(var a=0; a<range.length; a++){
+    var it = new Date(range[a].start);
+    if(it.getTime() < maxR && it.getTime() > minR){
+      c++;
+    }
+  }
+  return c;
+}
 
   //Takes in a number between 0-11 and returns the month as a string
 function monthName(num) {
@@ -231,19 +275,24 @@ function monthName(num) {
 //creates global itemsRef which contains the raw database data, sorted chronologically
 function makeData(theEvents){
   itemsRef = theEvents;
+  prevNum = itemsRef.length;
   itemsRef.sort(function(a,b) { 
               return new Date(a.start).getTime() - new Date(b.start).getTime() 
             });
   makeTimeline(itemsRef);
 }
 
+//open the options modal on button click
+function options(){
+  $('#optionsModal').modal();
+}
 
-//make the acutal timeline
+//process the data so it contains all necessary information/attributes
   function makeTimeline(theEvents){
-    //items is a global variable and can contain different things
+    //items is a global variable and can contain different things based on selection of sort, etc
     items = theEvents;
 
-    //creates an array of groups
+    //creates an array of group names
     for(var i=0; i<items.length; i++){
       if(groupName.indexOf(items[i].className) == -1){
         groupName.push(items[i].className);
@@ -251,6 +300,9 @@ function makeData(theEvents){
     }
     //sorting the group names keeps colors consistens
     groupName.sort();
+    //creating this hues list helps create distinguish colors
+    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+
     //creates group object with content, value and id and pushes it to groups
     for(var k =0; k< groupName.length; k++){
       var g = new Object();
@@ -258,27 +310,32 @@ function makeData(theEvents){
       g.id = k;
       g.value = k;
       groups.push(g);
+      //call from randomColor.js
+      colors.push(randomColor({
+        luminosity: 'dark',
+        hue: hues[k % 6],
+        seed: k
+      }));
     }
 
-    //creates array of colors.  objects are colored by which group they belong to, using randomcolor() generation
-    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'monochrome'];
+    //reiterate through items and change groups into numeric values rather than content
+    //this can be moved to be done on the backend
     for(var g=0; g<items.length; g++){
-      var gn = items[g].group;
+      var gn = items[g].className;
       //turns group based into a number
       items[g].group = groupName.indexOf(gn);
       //generates title for objects
       var str = items[g].content+" National "+items[g].className+" - " +items[g].subGroup +' - ' + items[g].start + ' - ' + items[g].metadata;
       items[g].title = str;
-      if(items[g].important == 'true'){
+      items[g].style = 'color:white;background-color:'+colors[items[g].group]+';';
+      //check if an item is marked important
+      if(items[g].important == 'true' || items.important == true){
         //if object is important, push to importantlist
         importantList.push(items[g]);
+        items[g].style += "font-weight:bold;";
       }
     }
 
-    //style all important items
-    for(var a =0; a<importantList.length; a++){
-      importantList[a].style = "font-weight:bold;";
-    }
     //generate grayed out important button if importantlist is empty
     if(importantList.length==0){
       var btn = '<button type="button" class="btn btn-default disabled">Show Important</button>'
@@ -289,17 +346,15 @@ function makeData(theEvents){
       var btn = '<button type="button" onclick="sortImportant('+true+')" class="btn btn-default">Show Important</button>'
       document.getElementById('showImpt').innerHTML = btn;
     }
-    //on intiakization, itemsref = items
-    if(start){
-      itemsRef = items;
-      start = false;
-    }
-    
+
+
+    //generate arrays of classes for sort method
     for(var a=0; a<groups.length; a++){
       var g = new Object();
       g.id = groups[a].id;
       g.group = groups[a];
       var tem = [];
+      //TODO make this more efficient
       for(var b=0; b<items.length; b++){
         if(items[b].group == g.group.id){
           tem.push(items[b]);
@@ -309,12 +364,10 @@ function makeData(theEvents){
       contents.push(g);
     }
 
-
-
+    //define minimum and maximum range of timeline as 10 years before first date/10 years after last date
     min = new Date(items[0].start).getTime() - 604800000*52*10;
     max = new Date(items[items.length-1].start).getTime() +604800000*52*10;
-
-
+    range = new Date(items[items.length-1].start).getFullYear() - new Date(items[0].start).getFullYear()
 
     // Configuration for the Timeline
     var options = {
@@ -333,6 +386,7 @@ function makeData(theEvents){
       },
       showCurrentTime: false,
       groupEditable: true,
+      clickToUse: false,
       editable: {
         add: true,
         updateTime: false,
@@ -340,12 +394,13 @@ function makeData(theEvents){
         remove: true
       },
 
+      //callback function for adding an object
       onAdd: function (item, callback) {
+        //create a string for the form that will auto-fill date/group based on click location
         desSTR ='<label for="des">Designation</label><br><select id="desSel" class="form-control" name="designation">';
         for(var i=0; i<groupName.length; i++){
           if(item.group == i){
             desSTR += '<option selected="selected" value="'+groupName[i]+'">'+groupName[i] +'</option>';
-
           }
           else{
             desSTR += '<option value="'+groupName[i]+'">'+groupName[i] +'</option>';
@@ -353,6 +408,7 @@ function makeData(theEvents){
         }
         desSTR += '</select>';
         document.getElementById('des').innerHTML = desSTR;
+        //format the month so that the input field can process it
         var day, month, year;
         year = item.start.getFullYear();
         month = item.start.getMonth() +1;
@@ -366,46 +422,19 @@ function makeData(theEvents){
         dateStr = year +'-'+month+'-'+day;
         var addDate ='<label for="date"> Date </label><br><input type="date" name="date" class="form-control" id="addDate" value="'+dateStr+'">'
         document.getElementById('date').innerHTML = addDate;
+        //open add object modal
         $("#addModal").modal();
-        // var name, state, desig;
-        // var ids = [];
-        // $("#addsub").click(function(){
-        //   name = $("#name").val();
-        //   state = $("#state").val();
-        //   des = $("#desSel").val();
-        //   item.content = name;
-        //   item.subGroup = state;
-        //   item.className = des;
-        //   item.group = groupName.indexOf(des);
-        //   ids.push(item.id)
-        //   var last = ids.length -1;
-        //   if(ids.indexOf(item.id) == last){
-        //     callback(item);
-        //     items.push(item);
-        //     items.sort(function(a,b) { 
-        //       return new Date(a.start).getTime() - new Date(b.start).getTime() 
-        //     });
-        //     makeD3Timeline(timeline);
-        //     var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
-        //     for(var j=0; j<groupName.length; j++){
-        //       $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-        //     }
-        //   }
-        //   $("#addModal").modal('hide');
-
-        // })
-              $('#addsub').unbind().on('click', function(){
-        $.ajax({
-          url: "{{url_for('addrec') }}",
-          method: "POST",
-          data: {
-            name: $('#name').val(),
-            date: $('#addDate').val(),
-            state: $('#state').val(),
-            meta : $('#meta').val(),
-            designation: $('#desSel').val()
-            //TODO: important always returns true.  Return true if checked, false if not
-            // important: $('#impt').val()
+        //call ajax function and push info to the database
+        $('#addsub').unbind().on('click', function(){
+          $.ajax({
+            url: "{{url_for('addrec') }}",
+            method: "POST",
+            data: {
+              name: $('#name').val(),
+              date: $('#addDate').val(),
+              state: $('#state').val(),
+              meta : $('#meta').val(),
+              designation: $('#desSel').val()
 
           },
           success: function(){
@@ -453,27 +482,29 @@ function makeData(theEvents){
         })
 
 
-      })
-          
-    },
+        })
+
+      },
 
 
-    onUpdate: function (item, callback) {
-      var day, month, year;
-      year = item.start.getFullYear();
-      month = item.start.getMonth() +1;
-      day = item.start.getDate();
-      if(month < 10){
-        month = '0' + month;
-      }
-      if(day < 10){
-        day = '0' + day;
-      }
-      dateStr = year +'-'+month+'-'+day;
-      var upSTR = '<label for="name"> Change Name </label><br><input type="text" name="name" class="form-control" id="upName" value="'+item.content+'">';
-      upSTR += '<input type="hidden" name="origName" id="orig" class="form-control" value="'+item.content+'">';
-      upSTR += '<label for="state"> Change Location </label><br><input type="text" name="state" class="form-control" id="upState" value="'+item.subGroup+'">';
-      upSTR += '<label for="date"> Change Date </label><br><input type="date" name="date" class="form-control" id="upDate" value="'+dateStr+'">'
+      onUpdate: function (item, callback) {
+        console.log(item);
+        var orig = item.content
+        var day, month, year;
+        year = item.start.getFullYear();
+        month = item.start.getMonth() +1;
+        day = item.start.getDate();
+        if(month < 10){
+          month = '0' + month;
+        }
+        if(day < 10){
+          day = '0' + day;
+        }
+        dateStr = year +'-'+month+'-'+day;
+        var upSTR = '<label for="name"> Change Name </label><br><input type="text" name="name" class="form-control" id="upName" value="'+item.content+'">';
+        upSTR += '<input type="hidden" name="origName" id="orig" class="form-control" value="'+item.content+'">';
+        upSTR += '<label for="state"> Change Location </label><br><input type="text" name="state" class="form-control" id="upState" value="'+item.subGroup+'">';
+        upSTR += '<label for="date"> Change Date </label><br><input type="date" name="date" class="form-control" id="upDate" value="'+dateStr+'">'
       // upSTR += '<label for="metadata"> Change MetaData </label><br> <input type="textarea" class="form-control" name="meta" value="'+item.metadata+'"><br>'
       upSTR += '<label for="metadata"> Change MetaData </label><br> <textarea class="form-control" id="upMeta" name="upMeta" rows="4" cols="50">'+item.metadata+'</textarea><br>'
       var impt = (item.important == "true" || item.important == true);
@@ -486,29 +517,23 @@ function makeData(theEvents){
       }
       // upSTR += '<input type="hidden" name="important" id="impt" value="false" checked>'
       document.getElementById("up").innerHTML = upSTR;
-      // var ids = [];
-      $('#updateModal').modal();
-      // $('#upsub').click(function(e){
-      //   item.content = $('#upName').val();
-      //   item.subGroup = $('#upState').val();
-      //   item.start = $('#upDate').val();
-      //   ids.push(item.id);
-      //   $('#updateModal').modal("hide");
-      //   for(var i=0; i<items.length; i++){
-      //     if(items[i].id == item.id){
-      //       items[i] = item;
-      //     }
-      //   }
-      //   items.sort(function(a,b) { 
-      //     return new Date(a.start).getTime() - new Date(b.start).getTime() 
-      //   });
-      //   makeD3Timeline();
-      //   var last = ids.length -1;
-      //   if(ids.indexOf(item.id) == last){        
-      //     callback(item);
-      //   }
-      //   })
+      if(item.editable == undefined){
+        $('#updateModal').modal();
 
+      }
+      else{
+        var s = new Date(item.start);
+        var e = new Date(item.end);
+        var inSTR = '<b>Range: </b> ' + s.toLocaleDateString() +' - ' + e.toLocaleDateString()+ '<br><b>Items not shown: </b><br><ul>';
+        var list = item.contains;
+        for(var i=0; i<list.length; i++){
+          inSTR += '<li>' + list[i] + ' National '+item.className +' </li>';
+        }
+        inSTR += '</ul>'
+
+        document.getElementById('info').innerHTML = inSTR;
+        $('#infoModal').modal();
+      }
       $('#upsub').unbind().on('click', function(){
         $.ajax({
           url: "{{url_for('editrec') }}",
@@ -517,7 +542,7 @@ function makeData(theEvents){
             name: $('#upName').val(),
             origName : $('#orig').val(),
             date: $('#upDate').val(),
-            important: $('#impt').prop("checked"),
+            important: String($('#impt').prop("checked")),
             state: $('#upState').val(),
             meta : $('#upMeta').val()
           },
@@ -537,22 +562,22 @@ function makeData(theEvents){
               else{
                 item.style = 'color:white;background-color:'+colors[item.group]+';';
               }
-              // for(var i=0; i<items.length; i++){
-              //   if(items[i].id == item.id){
-              //     items[i] = item;
-              //     console.log(items[i]);
-              //   }
-              //   break;
-              // }
-              // items.sort(function(a,b) { 
-              //   return new Date(a.start).getTime() - new Date(b.start).getTime() 
-              // });
-
-              // makeImportant();
               makeD3Timeline();
               // $('input').val('');
 
-              console.log(item);
+              // for(var i=0; i<itemsRef.length; i++){
+              //   if(orig == itemsRef[i].content){
+              //     itemsRef[i] = item;
+              //     break;
+              //   }
+              // }
+              for(var i=0; i<items.length; i++){
+                if(orig == items[i].content){
+                  items[i] = item;
+                  break;
+                }
+              }
+
               callback(item);
 
             // }
@@ -571,17 +596,6 @@ function makeData(theEvents){
       rmSTR += '<br><input type="hidden" name="name" class="form-control" id="delName" value="'+item.content+'">';
       document.getElementById('rm').innerHTML = rmSTR;
       $('#rmModal').modal();
-      // $("#rmsub").click(function(e){
-      //   callback(item);
-      //   makeD3Timeline();
-      //   for(var i=0; i<items.length; i++){
-      //     if(items[i].id == item.id){
-      //       items.splice(i, 1);
-      //     }
-      //   }
-      //   makeD3Timeline();        
-      //   $('#rmModal').modal('hide');
-      // })
       $('#rmsub').on('click', function(){
         $.ajax({
           url: "{{url_for('rmrec') }}",
@@ -613,78 +627,94 @@ function makeData(theEvents){
     timeline = new vis.Timeline(container, items, groups, options);
 
 
-    //document.getElementsByClassName('vis-item').setAttribute('data-toggle', "tooltip");
-    // $(".vis-item").attr('data-toggle', 'tooltip');
-
-    // $('[data-toggle="tooltip"]').tooltip();
-
-
-    timeline.on('select', function (properties){
-      var id = String(properties.items);
-      for(var j=0; j < items.length; j++){
-        if(id == items[j].id){
-          // $( document ).tooltip({
-          //   content: items[j].subGroup,
-          //   track: true
-          // });
-        }    
-      }
-    })
-
     timeline.on('rangechanged', function(properties){
-      var rg = timeline.getWindow();
-      combineItems(items, rg);
+        for(var j=0; j<groupName.length; j++){
+          $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+        }
+      if(imp){
+        var ch = $("#toggle").prop("checked");
+        if(ch){
+          var rg = timeline.getWindow();
+          var min = rg.start;
+          var max = rg.end;
+      // var num = timeline.getVisibleItems().length;
+      var num = getItemsInRange(min, max, itemsRef)
+      var change = prevNum / num;
+      // console.log( 'Prev: ' + prevNum + ' Current: '+num);
+      // console.log('Change '+ change);
+      if( change < 1.02 && change > 0.97){
+        // do nothing
+      }
+      else{
+        col = true;
+        max = max.getFullYear();
+        min = min.getFullYear();
+        var newRange = max - min;
+        if (Math.abs(range - newRange) > 2){
+      // console.log("/colData/"+num+'/'+max+'/'+min)
+      $.getJSON( "/colData/"+num+'/'+max+'/'+min, function(data) {
+        // console.log(data);
+        var content = [];
+        for(var i=0; i<data.length; i++){
+          if(data[i].metadata){
+            var o = new Object();
+            o.content = data[i].content;
+            o.group = groupName.indexOf(data[i].className);
+            o.className = data[i].className;
+            o.metadata = data[i].metadata;
+            o.subGroup = data[i].subGroup;
+            o.important = data[i].important
+            o.start = new Date(data[i].start);
+            o.style = 'color:white;background-color:'+colors[o.group]+';';
+            if(o.important == 'true'){
+              o.style += 'font-weight:bold;';
+            }
+          }
+          else{
+            var o = new Object();
+            o.content = data[i].content;
+            o.group = groupName.indexOf(data[i].className);
+            o.content += ' Items Collapsed';
+            o.className = data[i].className;
+            o.end = new Date(data[i].end);
+            o.start = new Date(data[i].start);
+            o.contains = data[i].contains;
+            o.editable = false;
+            o.style = 'color:black;background-color:'+colors[o.group]+';';
+          }
+          content.push(o);
+        }
+        prevNum = num;
+        range = newRange;
+        timeline.setData({
+          items: content
+        })
+        // makeTimeline(content);
+      })
+    }
+    else if(newRange < 8){
+      if(col){
+        timeline.setData({
+          items:itemsRef
+        })
+        col = false
+      }
+    }
+  }
+}
+else{
+  if(col){
+    timeline.setData({
+      items:itemsRef
     })
 
-    // timeline.on('click', function (properties){
-    //   if(properties.item != null){
-    //     var obj = new Object();
-    //     for(var i=0; i<items.length; i++){
-    //       if(items[i].id == properties.item){
-    //         obj = items[i];
-    //         break;
-    //       }
-    //     }
-    //     var infostr = '<b> Object Name: </b>' + obj.content + '<br>';
-    //     infostr += '<b> Object Location: </b>' + obj.subGroup + '<br>';
-    //     infostr += '<b> Object Designation: </b>' + obj.className + '<br>';
-    //     infostr += '<b> Additional Object Information: </b>' + obj.metadata + '<br>';
-    //     if(obj.important == 'true'){
-    //       infostr += 'This object has been marked as <b> Important </b><br>';
-    //     }
-    //     document.getElementById('info').innerHTML = infostr;
-    //     $('#infoModal').modal();
-    //   }
-    //   else{
-    //     var i = properties.group;
-    //     var array = [];
-    //     array.push(contents[i].group)
-    //     var itemArray = contents[i].items;
-    //     for(var x=0; x<itemArray.length; x++){
-    //       var sG = subGroups.indexOf(itemArray[x].subGroup);
-    //       var color = subGroupsCol[sG].color;
 
-    //       itemArray[x].style = 'background-color:'+color+'; color:black;';
-    //     }
+    col = false
+  }
+}
+}
 
-    //     timelineMinor.setData({
-    //       groups: array,
-    //       items: itemArray
-    //     })
-    //     // timelineMinor.redraw();
-    //   }
-    // })
-
-
-    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
-    for(var j=0; j<groupName.length; j++){
-      colors.push(randomColor({
-        luminosity: 'dark',
-        hue: hues[j % 6],
-        seed: j
-      }));
-      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-    }
+})
 
 
     //make multiple select
@@ -692,22 +722,25 @@ function makeData(theEvents){
     for(var i=0; i<groupName.length; i++){
       selStr += '<option value="'+i+'">'+groupName[i]+'</option>';
     }
-    selStr += '</select>  <button class="btn btn-primary" onclick="sort()"> Reload Elements </button>';
+    selStr += '</select> <br> ';
     document.getElementById('select').innerHTML = selStr;
     $('select').multipleSelect({
       width: 250
     });
     $('select').multipleSelect('checkAll');
 
-
+    selectLen = $('select').multipleSelect('getSelects');
+    selectLen = selectLen.length;
     makeD3Timeline(timeline);
 
   }
 
 
 function sort(){
+  $("#optionsModal").modal('hide');  
   var select =  $('select').multipleSelect('getSelects');
-  for(var k=0; k<select.length; k++){
+  if(selectLen != select.length){
+      for(var k=0; k<select.length; k++){
     select[k] = parseInt(select[k]);
   }
   items = [];
@@ -742,15 +775,17 @@ function sort(){
   timeline.setWindow(min, max);
 
 
-  timeline.on('changed', function(){
-    var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
-    for(var j=0; j<groupName.length; j++){
-      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-    }
-  })
+  // timeline.on('changed', function(){
+  //   for(var j=0; j<groupName.length; j++){
+  //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+  //   }
+  // })
 
 
   makeD3Timeline(timeline);
+  }
+
+selectLen = select.length;
 
 }
 
@@ -760,132 +795,134 @@ function sortImportant(bool){
       document.getElementById('showImpt').innerHTML = btn;
       // var imptGroups = [];
       var importantList = [];
-      // for(var k=0; k<items.length; k++){
-      //   if(items[k].important == 'true' || items[k].important == true){
-      //     console.log(items[k]);
-      //     importantList.push(items[k]);
-      //   }
-      // }
-      for(var i=0; i<importantList.length; i++){
-        if(imptGroups.indexOf(importantList[i].group) == -1){
-          var group = new Object();
-          group.id = importantList[i].group;
-          group.content = importantList[i].className;
-          imptGroups.push(group);
+      for(var k=0; k<items.length; k++){
+        if(items[k].important == 'true' || items[k].important == true){
+          importantList.push(items[k]);
         }
       }
+      // console.log(importantList);
+      // for(var i=0; i<importantList.length; i++){
+      //   if(imptGroups.indexOf(importantList[i].group) == -1){
+      //     var group = new Object();
+      //     group.id = importantList[i].group;
+      //     group.content = importantList[i].className;
+      //     imptGroups.push(group);
+      //   }
+      // }
       timeline.setData({
         items: importantList,
         // groups: imptGroups
       })
 
-      timeline.setWindow(min, max);
-      timeline.on('changed', function(){
-        for(var j=0; j<groupName.length; j++){
-          $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-        }
-      })
-
+      // timeline.setWindow(min, max);
+      // timeline.on('changed', function(){
+      //   for(var j=0; j<groupName.length; j++){
+      //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+      //   }
+      // })
+      imp = false;
     }
     else{
       timeline.setData({
-        items: itemsRef,
+        items: items,
         groups: groups
       })
       var btn = '<button type="button" onclick="sortImportant('+true+')" class="btn btn-default">Show Important</button>'
       document.getElementById('showImpt').innerHTML = btn;
-      timeline.setWindow(min, max);
-      timeline.on('changed', function(){
-        var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
-        for(var j=0; j<groupName.length; j++){
-          $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-        }
-      })
+      // timeline.setWindow(min, max);
+      // timeline.on('changed', function(){
+      //   var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
+      //   for(var j=0; j<groupName.length; j++){
+      //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+      //   }
+      // })
+      imp = true;
     }
 
 }
 
-  function combineItems(items, range){
-    var years = [];
-    var combined = [];
-    for(var i=0; i<items.length; i++){
-      var dt = new Date(items[i].start);
-      var yr = dt.getFullYear();
-      if(years.indexOf(yr) == -1){
-        years.push(yr);
+  // function combineItems(items, range){
+  //   var years = [];
+  //   var combined = [];
+  //   for(var i=0; i<items.length; i++){
+  //     var dt = new Date(items[i].start);
+  //     var yr = dt.getFullYear();
+  //     if(years.indexOf(yr) == -1){
+  //       years.push(yr);
 
-      }
-    }
-    bMin = new Date(range.start);
-    bMax = new Date(range.end);
-    if(bMax.getFullYear() - bMin.getFullYear() > 40 ){
-      for(var k=0; k<groups.length; k++){
-        for(var i=0; i<years.length; i++){
-          var temp = [];
-          for(var j=0; j<items.length; j++){
-            var dt = new Date(items[j].start)
-            if(dt.getFullYear() == years[i] && groups[k].id == items[j].group ){
-              temp.push(items[j]);
+  //     }
+  //   }
+  //   bMin = new Date(range.start);
+  //   bMax = new Date(range.end);
+  //   if(bMax.getFullYear() - bMin.getFullYear() > 40 ){
+  //     for(var k=0; k<groups.length; k++){
+  //       for(var i=0; i<years.length; i++){
+  //         var temp = [];
+  //         for(var j=0; j<items.length; j++){
+  //           var dt = new Date(items[j].start)
+  //           if(dt.getFullYear() == years[i] && groups[k].id == items[j].group ){
+  //             temp.push(items[j]);
 
-            }
-          }
-          if(temp.length > 0){
-            var min = temp[0].start;
-            var max = temp[temp.length-1].start;
-            for(var j=0; j<temp.length; j++){
-              minD = new Date(min)
-              maxD = new Date(max);
-              var dtS = new Date(temp[j].start);
-              var dtE = new Date(temp[j].end);
-              if(minD.getTime() > dtS.getTime()){
-                min = temp[j].start;
-              }
-              if(maxD.getTime() < dtS.getTime()){
-                max = temp[j].start;
-              }
-              if(maxD.getTime() < dtE.getTime()){
-                max = temp[j].end;
-              }
-            }
-            var obj = new Object();
-            obj.subItems = temp;
-            obj.start = min
-            obj.end = max
-            obj.group = groups[k].id;
-            obj.style = 'background-color:'+colors[k];
-            obj.content = 'Collasped Items: ' + temp.length;
-            if(temp.length > 1){
-              combined.push(obj);
-            }
-            else{
-              if(temp[0].group == groups[k].id){
-                temp[0].style = 'background-color:'+colors[k]+';color:white;';
-                combined.push(temp[0]);
+  //           }
+  //         }
+  //         if(temp.length > 0){
+  //           var min = temp[0].start;
+  //           var max = temp[temp.length-1].start;
+  //           for(var j=0; j<temp.length; j++){
+  //             minD = new Date(min)
+  //             maxD = new Date(max);
+  //             var dtS = new Date(temp[j].start);
+  //             var dtE = new Date(temp[j].end);
+  //             if(minD.getTime() > dtS.getTime()){
+  //               min = temp[j].start;
+  //             }
+  //             if(maxD.getTime() < dtS.getTime()){
+  //               max = temp[j].start;
+  //             }
+  //             if(maxD.getTime() < dtE.getTime()){
+  //               max = temp[j].end;
+  //             }
+  //           }
+  //           var obj = new Object();
+  //           obj.subItems = temp;
+  //           obj.start = min
+  //           obj.end = max
+  //           obj.group = groups[k].id;
+  //           obj.style = 'box-shadow: 2px 2px gray; background-color:'+colors[k];
+  //           obj.content = 'Collasped Items: ' + temp.length;
+  //           if(temp.length > 1){
+  //             combined.push(obj);
+  //           }
+  //           else{
+  //             if(temp[0].group == groups[k].id){
+  //               temp[0].style = 'background-color:'+colors[k]+';color:white;';
+  //               combined.push(temp[0]);
 
-              }
-            }
-          }
-        }
-      }
-      timeline.setData({
-        items: combined
-      })
+  //             }
+  //           }
+  //         }
+  //       }
+  //     }
+  //     timeline.setData({
+  //       items: combined
+  //     })
 
-    }
-    else{
-      timeline.setData({
-        items: items
-      })
-          for(var j=0; j<groupName.length; j++){
-      $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-    }
-      
-    }
+  //   }
+  //   else{
+  //     timeline.setData({
+  //       items: items
+  //     })
+  //         for(var j=0; j<groupName.length; j++){
+  //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
+  //   }
 
-  }
+  //   }
 
+  // }
 
+//make the minor timeline
 function makeD3Timeline(timeline){
+  //if the timeline already exists, delete it
     d3.select("#tl2").remove();
 
     var testData = [];

@@ -1,0 +1,22 @@
+SELECT substr(start, -4, 4) AS year, count(*)
+FROM timelineNPS2
+WHERE CAST(year as integer) < 2000 and CAST(year as integer) > 1900
+GROUP BY year
+
+
+this is just me messing with some sql statements and writing them down as i go
+
+SELECT className
+FROM timelineNPS2
+GROUP BY className
+
+SELECT substr(start, -4, 4) AS year, count(*), className
+FROM timelineNPS2
+WHERE CAST(year as integer) < 2000 and CAST(year as integer) > 1900
+GROUP BY year, className
+ORDER BY className, year
+
+SELECT substr(start, -4, 4) AS year, count(*), substr(start, 0, 3) as month, className
+FROM timelineNPS2
+GROUP BY year, className, month
+ORDER BY className, month, year
