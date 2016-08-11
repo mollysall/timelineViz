@@ -207,8 +207,6 @@
   var min, max;
   var importantList = [];
   var contents = [];
-  var subGroups = [];
-  var subGroupsCol = [];
   var upCounter = 0;
   var range;
   var imp = true;
@@ -371,11 +369,14 @@ function options(){
 
     // Configuration for the Timeline
     var options = {
+      //timeline heigh
       height: '700px',
       min: min,
       max: max,
       clickToUse: true,
+      //users can't zoom past month
       zoomMin: 604800000*4*30,
+      //drag groups to change order
       groupOrder: function (a, b) {
         return a.value - b.value;
       },
@@ -438,8 +439,7 @@ function options(){
 
           },
           success: function(){
-
-            var ids = [];
+            //change item data to modal fields
             $('#addModal').modal('hide');
             item.content = $('#name').val();
             item.subGroup = $('#state').val();
@@ -448,35 +448,14 @@ function options(){
             item.important =  false;
             var num = $('#desSel').val();
             item.group = groupName.indexOf(num);
-            ids.push(item.id);
-            for(var i=0; i<items.length; i++){
-              if(items[i].id == item.id){
-                items[i] = item;
-              }
-              break;
-            }
+            //add item to array and sort array
+            items.push(item);
             items.sort(function(a,b) { 
               return new Date(a.start).getTime() - new Date(b.start).getTime() 
             });
-            makeD3Timeline();
+            //update minor timeline
+            makeD3Timeline(timeline);
             var last = ids.length -1;
-            if(ids.indexOf(item.id) == last){
-              items.push(item);
-              items.sort(function(a,b) { 
-                return new Date(a.start).getTime() - new Date(b.start).getTime() 
-              });
-              makeD3Timeline(timeline);
-              // $(".vis-item."+groupName[item.group]).css('background-color', colors[item.group]).css('color', 'white');
-              item.style='color:white;background-color:'+colors[item.group]+';';
-              $('input').val('');
-              $('textarea').val('');
-
-              makeD3Timeline();
-
-
-              callback(item);
-
-            }
 
           }
         })
@@ -488,9 +467,9 @@ function options(){
 
 
       onUpdate: function (item, callback) {
-        console.log(item);
         var orig = item.content
         var day, month, year;
+        //configure start so that HTML date field will read it
         year = item.start.getFullYear();
         month = item.start.getMonth() +1;
         day = item.start.getDate();
@@ -501,13 +480,14 @@ function options(){
           day = '0' + day;
         }
         dateStr = year +'-'+month+'-'+day;
+        //build string for modal
         var upSTR = '<label for="name"> Change Name </label><br><input type="text" name="name" class="form-control" id="upName" value="'+item.content+'">';
         upSTR += '<input type="hidden" name="origName" id="orig" class="form-control" value="'+item.content+'">';
         upSTR += '<label for="state"> Change Location </label><br><input type="text" name="state" class="form-control" id="upState" value="'+item.subGroup+'">';
         upSTR += '<label for="date"> Change Date </label><br><input type="date" name="date" class="form-control" id="upDate" value="'+dateStr+'">'
-      // upSTR += '<label for="metadata"> Change MetaData </label><br> <input type="textarea" class="form-control" name="meta" value="'+item.metadata+'"><br>'
       upSTR += '<label for="metadata"> Change MetaData </label><br> <textarea class="form-control" id="upMeta" name="upMeta" rows="4" cols="50">'+item.metadata+'</textarea><br>'
       var impt = (item.important == "true" || item.important == true);
+      //check or uncheck the important box
       if(impt){
         upSTR+=   '<input type="checkbox" id="impt" name="important" value="true" checked> <b>Important</b> <br>'
       }
@@ -517,10 +497,11 @@ function options(){
       }
       // upSTR += '<input type="hidden" name="important" id="impt" value="false" checked>'
       document.getElementById("up").innerHTML = upSTR;
+      //if the item is a regular item, open modal
       if(item.editable == undefined){
         $('#updateModal').modal();
-
       }
+      //if item is collasped, generate info modal
       else{
         var s = new Date(item.start);
         var e = new Date(item.end);
@@ -534,6 +515,7 @@ function options(){
         document.getElementById('info').innerHTML = inSTR;
         $('#infoModal').modal();
       }
+      //ajax processing of updated item
       $('#upsub').unbind().on('click', function(){
         $.ajax({
           url: "{{url_for('editrec') }}",
@@ -562,15 +544,10 @@ function options(){
               else{
                 item.style = 'color:white;background-color:'+colors[item.group]+';';
               }
-              makeD3Timeline();
+              makeD3Timeline(timeline);
               // $('input').val('');
 
-              // for(var i=0; i<itemsRef.length; i++){
-              //   if(orig == itemsRef[i].content){
-              //     itemsRef[i] = item;
-              //     break;
-              //   }
-              // }
+              //go through items and insert item
               for(var i=0; i<items.length; i++){
                 if(orig == items[i].content){
                   items[i] = item;
@@ -588,14 +565,15 @@ function options(){
 
 
       })
-
       
     },
     onRemove: function (item, callback) {
+      //build remove string with item information
       rmSTR = "Are you sure you want to remove " + item.content + "?";
       rmSTR += '<br><input type="hidden" name="name" class="form-control" id="delName" value="'+item.content+'">';
       document.getElementById('rm').innerHTML = rmSTR;
       $('#rmModal').modal();
+      //ajax call to delete item
       $('#rmsub').on('click', function(){
         $.ajax({
           url: "{{url_for('rmrec') }}",
@@ -607,6 +585,8 @@ function options(){
             $('#rmModal').modal('hide');
             callback(item);
             makeD3Timeline();
+            //delete item
+            //TODO: I'm not actually sure if this works
             for(var i=0; i<items.length; i++){
               if(items[i].id == item.id){
                 items.splice(i, 1);
@@ -626,99 +606,117 @@ function options(){
     // Create a Timeline
     timeline = new vis.Timeline(container, items, groups, options);
 
+      //processing collapsing
+      timeline.on('rangechanged', function(properties){
+      //redraw box on d3 timeline
+      makeD3Timeline(timeline);
 
-    timeline.on('rangechanged', function(properties){
-        for(var j=0; j<groupName.length; j++){
-          $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-        }
+      //color everything.  catch-all in case things become uncolored
+      for(var j=0; j<groupName.length; j++){
+        $(".vis-item."+groupName[j]).css('background-color', colors[j]);
+      }
+      //if you are on Important View, get the value of the Toggle checkbox
       if(imp){
         var ch = $("#toggle").prop("checked");
-        if(ch){
-          var rg = timeline.getWindow();
-          var min = rg.start;
-          var max = rg.end;
-      // var num = timeline.getVisibleItems().length;
-      var num = getItemsInRange(min, max, itemsRef)
-      var change = prevNum / num;
-      // console.log( 'Prev: ' + prevNum + ' Current: '+num);
-      // console.log('Change '+ change);
-      if( change < 1.02 && change > 0.97){
-        // do nothing
-      }
-      else{
-        col = true;
-        max = max.getFullYear();
-        min = min.getFullYear();
-        var newRange = max - min;
-        if (Math.abs(range - newRange) > 2){
-      // console.log("/colData/"+num+'/'+max+'/'+min)
-      $.getJSON( "/colData/"+num+'/'+max+'/'+min, function(data) {
-        // console.log(data);
-        var content = [];
-        for(var i=0; i<data.length; i++){
-          if(data[i].metadata){
-            var o = new Object();
-            o.content = data[i].content;
-            o.group = groupName.indexOf(data[i].className);
-            o.className = data[i].className;
-            o.metadata = data[i].metadata;
-            o.subGroup = data[i].subGroup;
-            o.important = data[i].important
-            o.start = new Date(data[i].start);
-            o.style = 'color:white;background-color:'+colors[o.group]+';';
-            if(o.important == 'true'){
-              o.style += 'font-weight:bold;';
+      //if collaspe is toggled ON
+      if(ch){
+        var rg = timeline.getWindow();
+        var min = rg.start;
+        var max = rg.end;
+        var num = getItemsInRange(min, max, itemsRef)
+        //change is the ratio of items that were on the screen vs items now on the screen
+        var change = prevNum / num;
+        //if the range change is very small, don't make the sql call
+        if( change < 1.02 && change > 0.97){
+          // do nothing
+        }
+        //make the sql call
+        else{
+          //col is a variable used to prevent excessive checks
+          col = true;
+          max = max.getFullYear();
+          min = min.getFullYear();
+          var newRange = max - min;
+          //if the range change is greater than 2 years
+          //this is meant to prevent refreshing data when you move up and down or move and keep same general range
+          if (Math.abs(range - newRange) > 2){
+            //make JSON call
+            $.getJSON( "/colData/"+num+'/'+max+'/'+min, function(data) {
+              var content = [];
+              for(var i=0; i<data.length; i++){
+                //CASE 1: if you recieve a single point, process it into an object
+                if(data[i].metadata){
+                  var o = new Object();
+                  o.content = data[i].content;
+                  o.group = groupName.indexOf(data[i].className);
+                  o.className = data[i].className;
+                  o.metadata = data[i].metadata;
+                  o.subGroup = data[i].subGroup;
+                  o.important = data[i].important
+                  o.start = new Date(data[i].start);
+                  o.style = 'color:white;background-color:'+colors[o.group]+';';
+                  if(o.important == 'true'){
+                    o.style += 'font-weight:bold;';
+                  }
+                }
+                //CASE 2: if you recieve a collasped point, process it into an object
+                else{
+                  var o = new Object();
+                  o.content = data[i].content;
+                  o.group = groupName.indexOf(data[i].className);
+                  o.content += ' Items Collapsed';
+                  o.className = data[i].className;
+                  o.end = new Date(data[i].end);
+                  o.start = new Date(data[i].start);
+                  o.contains = data[i].contains;
+                  o.editable = false;
+                  o.style = 'color:black;background-color:'+colors[o.group]+';';
+                }
+                content.push(o);
+              }
+              //set prevNum/range so you can keep making comparisons
+              prevNum = num;
+              range = newRange;
+              timeline.setData({
+                items: content
+              })
+              // makeTimeline(content);
+            })
+          }
+          //if you're zoomed in closer than 8 years, just uncollaspe everything no matter what
+          else if(newRange < 8){
+            //col will keep the data from being continually reloaded
+            //otherwise it gets reloaded on every range change
+            if(col){
+              timeline.setData({
+                items:itemsRef
+              })
+              col = false
             }
           }
-          else{
-            var o = new Object();
-            o.content = data[i].content;
-            o.group = groupName.indexOf(data[i].className);
-            o.content += ' Items Collapsed';
-            o.className = data[i].className;
-            o.end = new Date(data[i].end);
-            o.start = new Date(data[i].start);
-            o.contains = data[i].contains;
-            o.editable = false;
-            o.style = 'color:black;background-color:'+colors[o.group]+';';
-          }
-          content.push(o);
         }
-        prevNum = num;
-        range = newRange;
-        timeline.setData({
-          items: content
-        })
-        // makeTimeline(content);
-      })
-    }
-    else if(newRange < 8){
-      if(col){
-        timeline.setData({
-          items:itemsRef
-        })
-        col = false
       }
-    }
-  }
-}
-else{
-  if(col){
-    timeline.setData({
-      items:itemsRef
+      //if collaspe is toggled OFF, just load regular data
+      else{
+        //col will keep the data from being continually reloaded
+        //otherwise it gets reloaded on every range change
+        if(col){
+          timeline.setData({
+            items:itemsRef
+          })
+
+          col = false
+        }
+      }
+      }
+
     })
 
 
-    col = false
-  }
-}
-}
-
-})
-
-
-    //make multiple select
+    //make multiple selection tap in options Modal
+    //documentation for the multiple select is here: http://wenzhixin.net.cn/p/multiple-select/docs/
     selStr = '<select multiple="multiple">'
+    //feed in groups
     for(var i=0; i<groupName.length; i++){
       selStr += '<option value="'+i+'">'+groupName[i]+'</option>';
     }
@@ -727,62 +725,53 @@ else{
     $('select').multipleSelect({
       width: 250
     });
+    //check all of the select
     $('select').multipleSelect('checkAll');
-
+    //get the number of checks
+    //this will be used as a comparison later 
     selectLen = $('select').multipleSelect('getSelects');
     selectLen = selectLen.length;
     makeD3Timeline(timeline);
 
   }
 
-
+//sort based on select
 function sort(){
   $("#optionsModal").modal('hide');  
+  //list of selected
   var select =  $('select').multipleSelect('getSelects');
   if(selectLen != select.length){
-      for(var k=0; k<select.length; k++){
-    select[k] = parseInt(select[k]);
-  }
-  items = [];
-  for(var i=0; i<itemsRef.length; i++){
-    var j = itemsRef[i];
-    if(select.indexOf(j.group) != -1){
-      var obj = new Object();
-      obj.content = j.content;
-      obj.className = j.className;
-      obj.group = j.group;
-      obj.start = j.start;
-      obj.subGroup = j.subGroup;
-      items.push(obj);
+    //turn string array into int array
+    for(var k=0; k<select.length; k++){
+      select[k] = parseInt(select[k]);
     }
+    var sorted = [];
+    for(var i=0; i<items.length; i++){
+      var j = items[i];
+      if(select.indexOf(j.group) != -1){
+        var obj = new Object();
+        obj.content = j.content;
+        obj.className = j.className;
+        obj.group = j.group;
+        obj.start = j.start;
+        obj.subGroup = j.subGroup;
+        sorted.push(obj);
+      }
 
-  }
-  var selectGroup = [];
-  for(var d=0; d<select.length; d++){
-    for(var e=0; e<groups.length; e++){
-      if(select[d] == groups[e].id){
-        selectGroup.push(groups[e]);
+    }
+    var selectGroup = [];
+    for(var i=0; i<groups.length; i++){
+      if(select.indexOf(groups[i].id) != -1){
+        selectGroup.push(groups[i]);
       }
     }
-  }
-  timeline.setData({
-    items: items,
+    console.log(selectGroup);
+    timeline.setData({
+    items: sorted,
     groups: selectGroup
-  });
-  
-  timeline.redraw();
-
-  timeline.setWindow(min, max);
+    });
 
 
-  // timeline.on('changed', function(){
-  //   for(var j=0; j<groupName.length; j++){
-  //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-  //   }
-  // })
-
-
-  makeD3Timeline(timeline);
   }
 
 selectLen = select.length;
@@ -790,142 +779,57 @@ selectLen = select.length;
 }
 
 function sortImportant(bool){
+  //CASE 1: Currently viewing all items, want to just see important
   if(bool){
+      //toggle the button
       var btn = '<button type="button" onclick="sortImportant('+false+')" class="btn btn-default">Show All</button>'
       document.getElementById('showImpt').innerHTML = btn;
-      // var imptGroups = [];
       var importantList = [];
+      //re-make importantList
       for(var k=0; k<items.length; k++){
         if(items[k].important == 'true' || items[k].important == true){
           importantList.push(items[k]);
         }
       }
-      // console.log(importantList);
-      // for(var i=0; i<importantList.length; i++){
-      //   if(imptGroups.indexOf(importantList[i].group) == -1){
-      //     var group = new Object();
-      //     group.id = importantList[i].group;
-      //     group.content = importantList[i].className;
-      //     imptGroups.push(group);
-      //   }
-      // }
+      //TODO: make an array of group objects that contain important items
+      //set data
       timeline.setData({
         items: importantList,
         // groups: imptGroups
       })
 
-      // timeline.setWindow(min, max);
-      // timeline.on('changed', function(){
-      //   for(var j=0; j<groupName.length; j++){
-      //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-      //   }
-      // })
+      //toggle boolean so collasping doesnt work
       imp = false;
     }
+    //CASE 2: Currently viewing only important items, want to view all
     else{
       timeline.setData({
         items: items,
         groups: groups
       })
+      //toggle button
       var btn = '<button type="button" onclick="sortImportant('+true+')" class="btn btn-default">Show Important</button>'
       document.getElementById('showImpt').innerHTML = btn;
-      // timeline.setWindow(min, max);
-      // timeline.on('changed', function(){
-      //   var hues = ['red', 'green', 'yellow', 'blue', 'pink', 'purple', 'orange'];
-      //   for(var j=0; j<groupName.length; j++){
-      //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-      //   }
-      // })
+      //toggle boolean so collasping works
       imp = true;
     }
 
 }
 
-  // function combineItems(items, range){
-  //   var years = [];
-  //   var combined = [];
-  //   for(var i=0; i<items.length; i++){
-  //     var dt = new Date(items[i].start);
-  //     var yr = dt.getFullYear();
-  //     if(years.indexOf(yr) == -1){
-  //       years.push(yr);
-
-  //     }
-  //   }
-  //   bMin = new Date(range.start);
-  //   bMax = new Date(range.end);
-  //   if(bMax.getFullYear() - bMin.getFullYear() > 40 ){
-  //     for(var k=0; k<groups.length; k++){
-  //       for(var i=0; i<years.length; i++){
-  //         var temp = [];
-  //         for(var j=0; j<items.length; j++){
-  //           var dt = new Date(items[j].start)
-  //           if(dt.getFullYear() == years[i] && groups[k].id == items[j].group ){
-  //             temp.push(items[j]);
-
-  //           }
-  //         }
-  //         if(temp.length > 0){
-  //           var min = temp[0].start;
-  //           var max = temp[temp.length-1].start;
-  //           for(var j=0; j<temp.length; j++){
-  //             minD = new Date(min)
-  //             maxD = new Date(max);
-  //             var dtS = new Date(temp[j].start);
-  //             var dtE = new Date(temp[j].end);
-  //             if(minD.getTime() > dtS.getTime()){
-  //               min = temp[j].start;
-  //             }
-  //             if(maxD.getTime() < dtS.getTime()){
-  //               max = temp[j].start;
-  //             }
-  //             if(maxD.getTime() < dtE.getTime()){
-  //               max = temp[j].end;
-  //             }
-  //           }
-  //           var obj = new Object();
-  //           obj.subItems = temp;
-  //           obj.start = min
-  //           obj.end = max
-  //           obj.group = groups[k].id;
-  //           obj.style = 'box-shadow: 2px 2px gray; background-color:'+colors[k];
-  //           obj.content = 'Collasped Items: ' + temp.length;
-  //           if(temp.length > 1){
-  //             combined.push(obj);
-  //           }
-  //           else{
-  //             if(temp[0].group == groups[k].id){
-  //               temp[0].style = 'background-color:'+colors[k]+';color:white;';
-  //               combined.push(temp[0]);
-
-  //             }
-  //           }
-  //         }
-  //       }
-  //     }
-  //     timeline.setData({
-  //       items: combined
-  //     })
-
-  //   }
-  //   else{
-  //     timeline.setData({
-  //       items: items
-  //     })
-  //         for(var j=0; j<groupName.length; j++){
-  //     $(".vis-item."+groupName[j]).css('background-color', colors[j]).css('color', 'white');
-  //   }
-
-  //   }
-
-  // }
 
 //make the minor timeline
+//all the documentation for this timeline can be found at https://github.com/jiahuang/d3-timeline
 function makeD3Timeline(timeline){
   //if the timeline already exists, delete it
-    d3.select("#tl2").remove();
+  d3.select("#tl2").remove();
 
+    //get the range 
+    var ran = timeline.getWindow();
     var testData = [];
+    //properly format data for D3 minor timeline
+    //Each category is an object with an attribute 'times', which is then filled with the times
+    //
+    //TODO: this only needs to happen once
     var temp2 = [];
     for(var x=0; x< colors.length; x++){
       temp2 =[];
@@ -939,6 +843,7 @@ function makeD3Timeline(timeline){
         if(s.className == groupName[x]){
           var point = new Object();
           point.color = colors[x];
+          point.display = "circle";
           point.name = s.content;
           point.id = s.id;
           point.starting_time = new Date(s.start).getTime();
@@ -949,42 +854,76 @@ function makeD3Timeline(timeline){
       }
       testData.push(times);
     }
-   var tooltip = d3.select("#timeline2")
-        .append("div")
-        .style("position", "absolute")
-        .style("z-index", "10")
-        .style("visibility", "hidden")
-        .style("opacity", 0.5)
-        .style("font-size", "0.75em")
-        .text("a simple tooltip");
 
+    //make the svg rect object that shows where you're currently viewing on the map
+    var start = new Date(ran.start);
+    var end = new Date(ran.end);
+    var point = new Object();
+    point.starting_time = start.getTime();
+    point.ending_time = end.getTime();
+    // point.display = "rectangle";
+    point.color = 'white';
+    var tmp = [];
+    tmp.push(point);
+    var times = new Object();
+    // times.label = 'View';
+    times.times = tmp;
+    testData.push(times);
+
+  //make the tooltip
+  var tooltip = d3.select("#timeline2")
+  .append("div")
+  .style("position", "absolute")
+  .style("z-index", "10")
+  .style("visibility", "hidden")
+  .style("opacity", 0.5)
+  .style("font-size", "0.75em")
+  .text("");
+
+  //make the timeline variable
   var chart = d3.timeline()
-  .tickFormat( //
+  .tickFormat( // ticks
   {
     format: d3.time.format("%Y"),
     tickTime: d3.time.years,
     tickInterval: 5,
     tickSize: 10
   })
-  .stack()
+  .stack() //make rows instead of dots on top of each other
   .itemHeight(10)
   .itemMargin(2)
-  .mouseover(function(d, i, datum) {
+  .mouseover(function(d, i, datum) {  //tooltip for mouseover on an object
     var dd = new Date(d.starting_time);
     var info = d.name + ' National '+ datum.label + ' - '+ d.state+' - '+ monthName(dd.getMonth()) + ' '+dd.getDate()+', '+dd.getFullYear();
-    return tooltip.style("visibility", "visible").text(info).style("left", event.clientX+'px').style("top", event.clientY+'px');
+    if(d.display == "circle"){
+      return tooltip.style("visibility", "visible").text(info).style("left", event.clientX+'px').style("top", event.clientY+'px');
+    }
   })
-  .mouseout(function(d, i, datum) {
+  .mouseout(function(d, i, datum) { //hides tooltip on mouseout
     return tooltip.style("visibility", "hidden");
   })
-  .click(function(d, i, datum){
+  .click(function(d, i, datum){ //recenters timeline on clicked object IF collapse is OFF
     timeline.focus(d.id, {animation: {duration: 2000, easingFunction: 'linear'}});
+    return tooltip.style("visibility", "hidden");
   })
-  .ending(new Date(items[items.length-1].start).getTime())
-  .display("circle"); // toggle between rectangles and circles
+  .ending(new Date(items[items.length-1].start).getTime()); //end the timeline at the last date
 
-  var svg = d3.select("#timeline2").append("svg").attr("width", width).attr("fill-opacity", .4).attr("align", "center").attr("id", "tl2")
+  //actually call and create the timeline SVG object
+  var svg = d3.select("#timeline2").append("svg").attr("width", width).attr("fill-opacity", .3).attr("align", "center").attr("id", "tl2")
   .datum(testData).call(chart);
+
+  //Make the labels 100% opacity
+  $('.timeline-label').attr("fill-opacity", 1);
+  //Format the rect object so it properly fills the timeline
+  $('.timelineSeries_4').css("stroke-width", 2);
+  $('.timelineSeries_4').css("fill-opacity", 0);
+  $('.timelineSeries_4').css("stroke", "black");
+  $('.timelineSeries_4').attr("height", 70);
+  $('.timelineSeries_4').attr("y", 25);
+  $('.timelineSeries_4').css("stroke-opacity", 0.2);
+
+
+
 }
 </script>
 
